@@ -1,0 +1,74 @@
+# =============================================================================
+#  Traefik — dynamic configuration (middleware definitions)
+# =============================================================================
+#  Mounted at /etc/traefik/dynamic.yml. Watched by Traefik — edits here do NOT
+#  require a container restart.
+#
+#  This file defines REUSABLE middlewares referenced from Docker labels on
+#  each service (e.g. traefik.http.routers.X.middlewares=security-headers@file).
+#
+#  The @file suffix tells Traefik the middleware lives in this file rather
+#  than in a Docker label (the alternative would be repeating these headers
+#  on every service).
+# =============================================================================
+---
+http:
+  middlewares:
+
+    # ─────── Dashboard protection ───────
+    #
+    # Basic-auth using a bcrypt hash mounted as a Docker secret (not inlined
+    # in a label — see ./scripts/gen-htpasswd.sh). The path below is where
+    # compose/*/compose.traefik.yml mounts the secret inside the container.
+    dashboard-auth:
+      basicAuth:
+        usersFile: /run/secrets/traefik_dashboard_htpasswd
+
+    # Restrict the dashboard to known-good networks. Comma-separated list
+    # comes from ${TRUSTED_CIDRS} in .env (defaults to RFC1918).
+    # Traefik v3 syntax: `ipAllowList.sourceRange`. (Older v2 used `ipWhiteList`.)
+    dashboard-ipallow:
+      ipAllowList:
+        sourceRange:
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+      # To override without editing this file, delete this middleware block
+      # and define an ipallow middleware via Docker labels in your own
+      # compose override — anything referenced with @docker wins over @file.
+
+    # ─────── General-purpose security headers ───────
+    #
+    # Applied to every externally-exposed router (eRPC, IPFS, dweb-proxy).
+    # HSTS is aggressive (2 years, includeSubdomains, preload) — this is fine
+    # because SPIRENS assumes HTTPS-only; relax if you mix HTTP/HTTPS.
+    security-headers:
+      headers:
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        referrerPolicy: "no-referrer-when-downgrade"
+        customResponseHeaders:
+          X-XSS-Protection: "1; mode=block"
+          Cross-Origin-Resource-Policy: "same-site"
+
+    # ─────── CORS for Web3 endpoints ───────
+    #
+    # eRPC and the IPFS gateway both get hit from browser-based dApps, which
+    # means CORS preflight must succeed. This is permissive by design — if
+    # you know your origins, tighten accessControlAllowOriginList.
+    cors-web3:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "OPTIONS"
+          - "POST"
+          - "PUT"
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true

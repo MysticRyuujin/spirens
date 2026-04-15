@@ -1,0 +1,56 @@
+%% SPIRENS — high-level architecture
+%% Render with: https://mermaid.live  or any Mermaid-aware markdown renderer.
+
+flowchart TB
+    client([Client / Browser / Wallet])
+
+    subgraph edge ["Cloudflare edge"]
+        cf[DNS + optional proxy/WAF]
+    end
+
+    subgraph host ["Your host(s)"]
+        traefik{{Traefik<br/>TLS via LE DNS-01}}
+
+        subgraph core ["Core Web3 services"]
+            erpc[eRPC<br/>:8545]
+            kubo[IPFS Kubo<br/>gateway :8080 · API :5001]
+            dweb[dweb-proxy<br/>:8080 HTTP · :11000 DoH]
+        end
+
+        subgraph optional ["Optional modules (opt-in)"]
+            redis[(Redis<br/>cache)]
+            ddns[cloudflare-ddns]
+            dnssync[dns-sync]
+            ethnode[ethereum EL+CL<br/>Geth + Lighthouse]
+        end
+    end
+
+    subgraph upstreams ["Upstreams"]
+        localnode[[ETH_LOCAL_URL<br/>your Ethereum node]]
+        alchemy[[Alchemy]]
+        quicknode[[QuickNode]]
+        ankr[[Ankr]]
+        infura[[Infura]]
+    end
+
+    client --> cf --> traefik
+    traefik -->|rpc.*| erpc
+    traefik -->|ipfs.*  *.ipfs.*| kubo
+    traefik -->|*.eth.*| dweb
+    traefik -->|ens-resolver.*| dweb
+
+    erpc -.->|scored| localnode
+    erpc -.->|fallback| alchemy
+    erpc -.->|fallback| quicknode
+    erpc -.->|fallback| ankr
+    erpc -.->|fallback| infura
+    erpc -.->|optional| redis
+
+    dweb -->|resolves ENS via| erpc
+    dweb -->|Kubo API| kubo
+    dweb -.->|optional| redis
+
+    ethnode -.->|localhost| localnode
+
+    classDef optdim stroke-dasharray: 5 5,opacity:0.8
+    class redis,ddns,dnssync,ethnode,alchemy,quicknode,ankr,infura optdim

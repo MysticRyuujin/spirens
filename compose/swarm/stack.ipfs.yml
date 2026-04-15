@@ -1,0 +1,79 @@
+# =============================================================================
+#  IPFS Kubo — Swarm
+# =============================================================================
+#  Notes:
+#    - IPFS wants to publish its swarm port to the internet for peering.
+#      In swarm, port 4001 is published in HOST mode so the external P2P
+#      endpoint is the node's real IP, not a VIP.
+#    - Replicas = 1. Multiple Kubo replicas on the same datastore corrupt
+#      state; if you want HA, run one replica and back up the volume.
+#    - Use a dedicated node (label: `ipfs=true`) and pin with placement
+#      constraints — the datastore is not meant to migrate between hosts
+#      while running.
+# =============================================================================
+---
+services:
+  ipfs:
+    image: ipfs/kubo:latest
+    environment:
+      IPFS_PROFILE: "server,pebbleds"
+    ports:
+      - target: 4001
+        published: 4001
+        protocol: tcp
+        mode: host
+      - target: 4001
+        published: 4001
+        protocol: udp
+        mode: host
+      # API — loopback only, bound at the node level.
+      - target: 5001
+        published: 5001
+        protocol: tcp
+        mode: host
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - frontend
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.ipfs == true
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=spirens_frontend"
+
+        - "traefik.http.routers.ipfs.rule=Host(`${IPFS_GATEWAY_HOST}`)"
+        - "traefik.http.routers.ipfs.entrypoints=websecure"
+        - "traefik.http.routers.ipfs.tls.certresolver=le"
+        - "traefik.http.routers.ipfs.tls.domains[0].main=${IPFS_GATEWAY_HOST}"
+        - "traefik.http.routers.ipfs.tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}"
+        - "traefik.http.routers.ipfs.middlewares=security-headers@file,cors-web3@file"
+        - "traefik.http.routers.ipfs.service=ipfs"
+
+        - "traefik.http.routers.ipfs-sub.rule=HostRegexp(`^.+\\.${IPFS_GATEWAY_HOST:?unset}$`)"
+        - "traefik.http.routers.ipfs-sub.entrypoints=websecure"
+        - "traefik.http.routers.ipfs-sub.tls.certresolver=le"
+        - "traefik.http.routers.ipfs-sub.tls.domains[0].main=${IPFS_GATEWAY_HOST}"
+        - "traefik.http.routers.ipfs-sub.tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}"
+        - "traefik.http.routers.ipfs-sub.middlewares=security-headers@file,cors-web3@file"
+        - "traefik.http.routers.ipfs-sub.service=ipfs"
+
+        - "traefik.http.services.ipfs.loadbalancer.server.port=8080"
+
+volumes:
+  ipfs_data:
+    name: spirens_ipfs_data
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

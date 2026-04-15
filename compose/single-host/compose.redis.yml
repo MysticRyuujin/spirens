@@ -1,0 +1,40 @@
+# =============================================================================
+#  Redis — single-host
+# =============================================================================
+#  Required by dweb-proxy (ENS resolution cache + rate limits — see its
+#  upstream README, which calls out `redis` as the first deploy step).
+#  Also used opportunistically by eRPC when the Redis connector is
+#  uncommented in config/erpc/erpc.yaml.
+#
+#  Password comes from ${REDIS_PASSWORD} in .env — scripts/bootstrap.sh
+#  generates a random one if the var is empty on first run.
+# =============================================================================
+---
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: spirens-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}"
+      - --maxmemory
+      - "256mb"
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "no"            # cache, not a database — no need to persist
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+volumes:
+  redis_data:
+    name: spirens_redis_data
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

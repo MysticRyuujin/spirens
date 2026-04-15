@@ -1,0 +1,54 @@
+---
+extends: default
+
+rules:
+  # Compose files have longer lines (Traefik labels especially).
+  line-length:
+    max: 160
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+
+  # Compose has 'on: ...' keys for GH actions too; keep permissive.
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false
+
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # We use --- on every file intentionally — enforce it.
+  document-start:
+    present: true
+
+  # Readability: allow aligned colons in env blocks, e.g.
+  #     ETH_LOCAL_URL:      "${ETH_LOCAL_URL:-}"
+  #     ALCHEMY_API_KEY:    "${ALCHEMY_API_KEY:-}"
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: -1
+
+  # Let humans align things occasionally.
+  indentation:
+    indent-sequences: consistent
+
+  comments:
+    min-spaces-from-content: 1
+
+  comments-indentation: disable  # educational comments intentionally dedent sometimes
+
+  # records.yaml uses flow-style for compactness; keep the human-tuned spacing.
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  commas:
+    max-spaces-after: -1
+
+ignore: |
+  .git/
+  .venv/
+  node_modules/
+  letsencrypt/
+  secrets/
+  data/

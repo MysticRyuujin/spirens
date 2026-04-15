@@ -1,0 +1,113 @@
+# =============================================================================
+#  Traefik — Docker Swarm topology
+# =============================================================================
+#  Identical service behavior to compose/single-host/compose.traefik.yml but:
+#    - uses the `--providers.swarm=true` provider instead of `.docker`
+#    - declares external configs + secrets (created beforehand by the operator)
+#    - deploys globally to manager nodes (common pattern for ingress)
+#
+#  Deploy with:
+#    docker stack deploy -c stack.traefik.yml spirens-traefik
+#
+#  Prerequisites:
+#    docker network create --driver overlay --attachable spirens_frontend
+#    docker network create --driver overlay --attachable spirens_backend
+#    echo -n "$CF_DNS_API_TOKEN" | docker secret create cf_api_token -
+#    docker secret create traefik_dashboard_htpasswd ../../secrets/traefik_dashboard_htpasswd
+#    docker config create spirens_traefik_yml      ../../config/traefik/traefik.yml
+#    docker config create spirens_traefik_dynamic  ../../config/traefik/dynamic.yml
+#
+#  (./scripts/bootstrap.sh --swarm does all of the above idempotently.)
+# =============================================================================
+---
+services:
+  traefik:
+    image: traefik:v3.2
+    command:
+      - --providers.swarm=true
+      - --providers.swarm.exposedByDefault=false
+      - --providers.swarm.network=spirens_frontend
+
+      - --certificatesResolvers.le.acme.email=${ACME_EMAIL}
+      - --certificatesResolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesResolvers.le.acme.dnsChallenge=true
+      - --certificatesResolvers.le.acme.dnsChallenge.provider=cloudflare
+
+    ports:
+      - target: 80
+        published: 80
+        mode: host
+      - target: 443
+        published: 443
+        mode: host
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+
+    environment:
+      CF_API_EMAIL: "${CF_API_EMAIL}"
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+
+    configs:
+      - source: spirens_traefik_yml
+        target: /etc/traefik/traefik.yml
+      - source: spirens_traefik_dynamic
+        target: /etc/traefik/dynamic.yml
+
+    secrets:
+      - cf_api_token
+      - traefik_dashboard_htpasswd
+
+    networks:
+      - frontend
+      - backend
+
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+
+        - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)"
+        - "traefik.http.routers.traefik.entrypoints=websecure"
+        - "traefik.http.routers.traefik.service=api@internal"
+        - "traefik.http.routers.traefik.tls=true"
+        - "traefik.http.routers.traefik.tls.certresolver=le"
+        - "traefik.http.routers.traefik.middlewares=dashboard-auth@file,dashboard-ipallow@file,security-headers@file"
+
+        # Required in Swarm even when only api@internal is served.
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+configs:
+  spirens_traefik_yml:
+    external: true
+  spirens_traefik_dynamic:
+    external: true
+
+secrets:
+  cf_api_token:
+    external: true
+  traefik_dashboard_htpasswd:
+    external: true
+
+volumes:
+  letsencrypt:
+    # In swarm, you usually want this on shared storage (NFS) so ACME state
+    # survives manager failover. Example NFS driver:
+    #   driver: local
+    #   driver_opts:
+    #     type: nfs
+    #     o: addr=${NFS_SERVER},nfsvers=4,rw
+    #     device: ":/exports/spirens/letsencrypt"
+    name: spirens_letsencrypt
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

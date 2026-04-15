@@ -1,0 +1,42 @@
+# =============================================================================
+#  DNS sync — optional
+# =============================================================================
+#  Reconciles config/dns/records.yaml to Cloudflare via API, using only Python
+#  stdlib. Build is local (no third-party image) so you can audit every line.
+#
+#  Enable by including this file from compose.yml:
+#      include:
+#        ...
+#        - optional/compose.dns-sync.yml
+#
+#  Manual one-shot run (no include needed):
+#      docker compose -f compose.dns-sync.yml run --rm dns-sync
+#
+#  Set DNS_SYNC_INTERVAL=one-shot (default) for oneshot, or e.g. 1h for a loop.
+# =============================================================================
+---
+services:
+  dns-sync:
+    build:
+      context: ./dns-sync
+    image: spirens/dns-sync:local
+    container_name: spirens-dns-sync
+    restart: "no"          # one-shot by default
+    read_only: true
+    cap_drop: [all]
+    security_opt: [no-new-privileges:true]
+    environment:
+      BASE_DOMAIN: "${BASE_DOMAIN}"
+      CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
+      PUBLIC_IP: "${PUBLIC_IP:-auto}"
+      DNS_SYNC_INTERVAL: "${DNS_SYNC_INTERVAL:-one-shot}"
+      RECORDS_FILE: /records.yaml
+    volumes:
+      - ../../config/dns/records.yaml:/records.yaml:ro
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

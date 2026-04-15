@@ -1,0 +1,78 @@
+# =============================================================================
+#  Ethereum EL + CL reference — Swarm variant
+# =============================================================================
+#  Important caveat: running Ethereum clients under Swarm is unusual. The
+#  network_mode:host requirement doesn't combine with Swarm's overlay
+#  networking, and the replica count for a validator MUST be 1. This file
+#  exists for completeness but the single-host version is recommended even
+#  within a Swarm environment — pin the node to one manager or worker with
+#  a deploy.placement.constraints and treat it as a singleton service.
+#
+#  Activate:
+#    cp stack.ethereum.yml.example stack.ethereum.yml
+#    $EDITOR stack.ethereum.yml    # set node placement + ETH_DATA_DIR
+#    docker stack deploy -c stack.ethereum.yml spirens-ethereum
+# =============================================================================
+---
+services:
+  geth:
+    image: ethereum/client-go:v1.14.12
+    volumes:
+      - "${ETH_DATA_DIR}/geth:/data"
+      - eth_shared:/shared
+    command:
+      - --mainnet
+      - --datadir=/data
+      - --syncmode=snap
+      - --cache=8192
+      - --http
+      - --http.addr=127.0.0.1
+      - --http.port=8545
+      - --http.vhosts=localhost,host.docker.internal
+      - --http.api=eth,net,web3,txpool
+      - --authrpc.addr=127.0.0.1
+      - --authrpc.port=8551
+      - --authrpc.vhosts=localhost
+      - --authrpc.jwtsecret=/shared/jwt.hex
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.ethereum == true   # docker node update --label-add ethereum=true <node>
+      endpoint_mode: dnsrr
+      restart_policy:
+        condition: on-failure
+    network_mode: host   # Swarm tolerates this at deploy-time; one replica only.
+
+  lighthouse:
+    image: sigp/lighthouse:v5.3.0
+    volumes:
+      - "${ETH_DATA_DIR}/lighthouse:/data"
+      - eth_shared:/shared
+    command:
+      - lighthouse
+      - bn
+      - --network=mainnet
+      - --datadir=/data
+      - --execution-endpoint=http://localhost:8551
+      - --execution-jwt=/shared/jwt.hex
+      - --http
+      - --http-address=127.0.0.1
+      - --http-port=5052
+      - --checkpoint-sync-url=https://mainnet.checkpoint.sigp.io
+      - --disable-deposit-contract-sync
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.ethereum == true
+      endpoint_mode: dnsrr
+      restart_policy:
+        condition: on-failure
+    network_mode: host
+
+volumes:
+  eth_shared:
+    name: spirens_eth_shared

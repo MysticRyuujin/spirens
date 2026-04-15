@@ -1,0 +1,27 @@
+# =============================================================================
+#  SPIRENS — DNS record manifest
+# =============================================================================
+#  This file is the source of truth for every DNS record the stack needs.
+#  It's consumed by:
+#    - docs/02-dns-and-cloudflare.md  (rendered as a table for readers)
+#    - compose/*/optional/compose.dns-sync.yml  (reconciled against Cloudflare)
+#
+#  Each entry:
+#    type    : A | AAAA | CNAME | TXT         (SPIRENS only ships A by default)
+#    name    : subdomain relative to BASE_DOMAIN (use "@" for the apex)
+#    proxied : true  → Cloudflare orange-cloud (proxied)
+#              false → grey-cloud (DNS-only)
+#    comment : free-form — shows up in the docs table and as a CF comment
+#
+#  PUBLIC_IP for A records is supplied at sync time from the environment
+#  (PUBLIC_IP=auto auto-detects via ipv4.icanhazip.com).
+# =============================================================================
+---
+records:
+  - { type: A, name: rpc,          proxied: false, comment: "eRPC JSON-RPC endpoint" }
+  - { type: A, name: ipfs,         proxied: false, comment: "IPFS HTTP gateway (root)" }
+  - { type: A, name: "*.ipfs",     proxied: false, comment: "IPFS subdomain gateway (wildcard, DNS-only on free CF plans)" }
+  - { type: A, name: eth,          proxied: false, comment: "ENS gateway root" }
+  - { type: A, name: "*.eth",      proxied: false, comment: "ENS subdomain gateway (wildcard, DNS-only on free CF plans)" }
+  - { type: A, name: ens-resolver, proxied: false, comment: "DoH endpoint Kubo uses for .eth resolution" }
+  - { type: A, name: traefik,      proxied: true,  comment: "Traefik dashboard (IP-allowlisted + basic-auth)" }

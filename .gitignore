@@ -1,0 +1,31 @@
+# Environment — contains CF token, Ethereum URLs, etc.
+.env
+.env.local
+.env.*.local
+
+# Secrets — bcrypt hashes, API tokens, ACME state, JWT secrets.
+/secrets/
+secrets/*
+!secrets/.gitkeep
+
+# Runtime state
+/letsencrypt/
+/data/
+
+# Generated
+/*.log
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+node_modules/
+.pre-commit-cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

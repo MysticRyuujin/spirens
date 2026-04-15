@@ -1,0 +1,34 @@
+#
+# SPIRENS — Python tooling
+# =====================================================================
+# We ship exactly one Python file (compose/single-host/optional/dns-sync/sync.py);
+# this exists to give ruff/black/etc. a consistent config if you run them.
+#
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+  ".venv",
+  "letsencrypt",
+  "data",
+  "secrets",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "SIM", # simplifications
+]
+ignore = [
+  "E501", # line length — handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

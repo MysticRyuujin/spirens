@@ -1,0 +1,22 @@
+# =============================================================================
+#  SPIRENS — single-host entrypoint
+# =============================================================================
+#  This is what `docker compose up` in compose/single-host/ picks up. It uses
+#  Compose v2's `include:` directive to pull in one file per service.
+#
+#  Core 4 are enabled by default. Opt-in modules are commented out — uncomment
+#  the lines you want active, re-run `./scripts/up.sh single`.
+# =============================================================================
+---
+include:
+  # ─── Core ──────────────────────────────────────────
+  - compose.traefik.yml
+  - compose.redis.yml           # required by dweb-proxy
+  - compose.erpc.yml
+  - compose.ipfs.yml
+  - compose.dweb-proxy.yml
+
+  # ─── Optional — uncomment to enable ───────────────
+  # - optional/compose.ddns.yml           # Cloudflare DDNS
+  # - optional/compose.dns-sync.yml       # reconcile config/dns/records.yaml → CF
+  # - optional/compose.ethereum.yml       # copy .example → .yml first; see docs/05

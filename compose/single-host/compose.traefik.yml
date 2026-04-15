@@ -1,0 +1,88 @@
+# =============================================================================
+#  Traefik — single-host topology
+# =============================================================================
+#  Reverse proxy + TLS termination. Discovers other services via Docker
+#  labels. Fetches Let's Encrypt certificates via Cloudflare DNS-01 (works
+#  with or without CF proxy mode, supports wildcards).
+#
+#  Included by ./compose.yml. If you run Traefik stand-alone for testing,
+#  `docker compose -f compose.traefik.yml up` works too, but the networks
+#  must already exist (scripts/bootstrap.sh creates them).
+# =============================================================================
+---
+services:
+  traefik:
+    image: traefik:v3.2
+    container_name: spirens-traefik
+    restart: unless-stopped
+    command:
+      # Provider: single-host uses the Docker provider (label-based).
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=spirens_frontend
+
+      # ACME — email + storage path come from env/flags so the static
+      # config stays environment-agnostic.
+      - --certificatesResolvers.le.acme.email=${ACME_EMAIL}
+      - --certificatesResolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesResolvers.le.acme.dnsChallenge=true
+      - --certificatesResolvers.le.acme.dnsChallenge.provider=cloudflare
+
+    ports:
+      - "80:80"
+      - "443:443"
+      # Dashboard on 8080 stays CLOSED on the host — reached via the `traefik`
+      # Docker-label router (IP-allowlisted + basic-auth).
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../../config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ../../config/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - letsencrypt:/letsencrypt
+
+    environment:
+      CF_API_EMAIL: "${CF_API_EMAIL}"
+      # The Cloudflare DNS-01 provider reads CF_DNS_API_TOKEN from a file so
+      # the token never appears in env vars or `docker inspect`.
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+
+    secrets:
+      - cf_api_token
+      - traefik_dashboard_htpasswd
+
+    networks:
+      - frontend
+      - backend
+
+    labels:
+      - "traefik.enable=true"
+
+      # ─── Dashboard router ──────────────────────────────────────────
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=le"
+      - "traefik.http.routers.traefik.middlewares=dashboard-auth@file,dashboard-ipallow@file,security-headers@file"
+
+      # Traefik wants SOME service defined even when using api@internal —
+      # this port is never actually hit.
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+secrets:
+  cf_api_token:
+    file: ../../secrets/cf_api_token
+  traefik_dashboard_htpasswd:
+    file: ../../secrets/traefik_dashboard_htpasswd
+
+volumes:
+  letsencrypt:
+    name: spirens_letsencrypt
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

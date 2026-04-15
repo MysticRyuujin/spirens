@@ -1,0 +1,32 @@
+# =============================================================================
+#  Cloudflare DDNS — Swarm variant
+# =============================================================================
+#  Same behavior as compose/single-host/optional/compose.ddns.yml. Deploy with:
+#     docker stack deploy -c stack.ddns.yml spirens-ddns
+# =============================================================================
+---
+services:
+  ddns:
+    image: favonia/cloudflare-ddns:latest
+    environment:
+      CLOUDFLARE_API_TOKEN: "${CF_DNS_API_TOKEN}"
+      DOMAINS: "${DDNS_DOMAINS}"
+      IP4_PROVIDER: cloudflare.trace
+      IP6_PROVIDER: none
+      UPDATE_CRON: "@every 5m"
+      TZ: UTC
+    networks:
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 64M
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

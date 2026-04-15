@@ -1,0 +1,4 @@
+{
+  "_comment": "Maps incoming hostnames to the TLD the dweb-proxy should resolve. Source for ${LIMO_HOSTNAME_SUBSTITUTION_CONFIG}; encode via scripts/encode-hostname-map.sh and pass to the container.",
+  "${DWEB_ETH_HOST}": "eth"
+}

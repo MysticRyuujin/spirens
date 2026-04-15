@@ -1,0 +1,44 @@
+# =============================================================================
+#  Cloudflare DDNS — optional
+# =============================================================================
+#  Keeps a set of A records pointed at your dynamic IP. Uses favonia/cloudflare-ddns,
+#  which is small, auth-token-only (no email/Global API Key), and handles both
+#  IPv4 and IPv6.
+#
+#  Enable by including this file from compose/single-host/compose.yml:
+#      include:
+#        - compose.traefik.yml
+#        ... etc ...
+#        - optional/compose.ddns.yml
+#
+#  Reuses ${CF_DNS_API_TOKEN}. If you're uncomfortable reusing the same token
+#  for both cert issuance and DDNS, create a second, narrower token with just
+#  Zone.DNS:Edit on the target records and set it via CF_DNS_API_TOKEN_DDNS
+#  (not currently wired; trivial to add).
+# =============================================================================
+---
+services:
+  ddns:
+    image: favonia/cloudflare-ddns:latest
+    container_name: spirens-ddns
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [all]
+    security_opt: [no-new-privileges:true]
+    environment:
+      CLOUDFLARE_API_TOKEN: "${CF_DNS_API_TOKEN}"
+      # DDNS_DOMAINS is built by scripts/up.sh from DDNS_RECORDS × BASE_DOMAIN
+      # (Compose's ${…} interpolation doesn't do bash-style substring replacement,
+      # so we do it in the wrapper script).
+      DOMAINS: "${DDNS_DOMAINS}"
+      IP4_PROVIDER: cloudflare.trace
+      IP6_PROVIDER: none     # set to cloudflare.trace if you have native IPv6
+      UPDATE_CRON: "@every 5m"
+      TZ: UTC
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

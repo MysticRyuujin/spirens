@@ -1,0 +1,58 @@
+# =============================================================================
+#  eRPC — Swarm
+# =============================================================================
+#  In swarm, we ship erpc.yaml as a Docker config instead of a bind mount so
+#  it's available on any node the service lands on.
+#
+#  Bootstrap (or ./scripts/bootstrap.sh --swarm) must create:
+#      docker config create spirens_erpc_yaml config/erpc/erpc.yaml
+# =============================================================================
+---
+services:
+  erpc:
+    image: ghcr.io/erpc/erpc:latest
+    command:
+      - /erpc-server
+      - /etc/erpc/erpc.yaml
+
+    configs:
+      - source: spirens_erpc_yaml
+        target: /etc/erpc/erpc.yaml
+
+    environment:
+      ETH_LOCAL_URL:      "${ETH_LOCAL_URL:-}"
+      ALCHEMY_API_KEY:    "${ALCHEMY_API_KEY:-}"
+      ANKR_API_KEY:       "${ANKR_API_KEY:-}"
+      QUICKNODE_API_KEY:  "${QUICKNODE_API_KEY:-}"
+      INFURA_API_KEY:     "${INFURA_API_KEY:-}"
+      REDIS_PASSWORD:     "${REDIS_PASSWORD:-}"
+
+    networks:
+      - frontend
+      - backend
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=spirens_frontend"
+        - "traefik.http.routers.erpc.rule=Host(`${ERPC_HOST}`)"
+        - "traefik.http.routers.erpc.entrypoints=websecure"
+        - "traefik.http.routers.erpc.tls.certresolver=le"
+        - "traefik.http.routers.erpc.middlewares=security-headers@file,cors-web3@file"
+        - "traefik.http.services.erpc.loadbalancer.server.port=8545"
+
+configs:
+  spirens_erpc_yaml:
+    external: true
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

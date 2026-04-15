@@ -1,0 +1,92 @@
+# =============================================================================
+#  SPIRENS — lint & format CI
+# =============================================================================
+#  Runs on every push and pull request. Each job is cheap and parallel.
+#  Anything that fails here is exactly what `pre-commit run --all-files`
+#  would have caught locally.
+# =============================================================================
+---
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── All-in-one via pre-commit ─────────────────────────────────────────────
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install shfmt (needed by the shfmt hook)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shfmt
+      - uses: pre-commit/action@v3.0.1
+
+  # ─── Compose validation (single-host + swarm) ──────────────────────────────
+  compose-validate:
+    name: compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seed test .env
+        run: |
+          cat > /tmp/spirens.env <<'EOF'
+          BASE_DOMAIN=example.com
+          ACME_EMAIL=admin@example.com
+          CF_API_EMAIL=you@example.com
+          CF_DNS_API_TOKEN=dummy-token
+          TRAEFIK_DASHBOARD_HOST=traefik.example.com
+          TRUSTED_CIDRS=10.0.0.0/8
+          ERPC_HOST=rpc.example.com
+          ETH_LOCAL_URL=
+          IPFS_GATEWAY_HOST=ipfs.example.com
+          DWEB_ETH_HOST=eth.example.com
+          DWEB_RESOLVER_HOST=ens-resolver.example.com
+          REDIS_PASSWORD=test
+          LIMO_HOSTNAME_SUBSTITUTION_CONFIG=eyJldGguZXhhbXBsZS5jb20iOiJldGgifQ==
+          DDNS_DOMAINS=rpc.example.com,ipfs.example.com
+          PUBLIC_IP=auto
+          DNS_SYNC_INTERVAL=1h
+          REDIS_URL=redis://:test@redis:6379/0
+          EOF
+
+      - name: Seed placeholder secret files
+        run: mkdir -p secrets && touch secrets/cf_api_token secrets/traefik_dashboard_htpasswd
+
+      - name: Validate single-host aggregate
+        # Entry point that `include:`s every core module. Validates the
+        # union — required because dweb-proxy depends_on redis (defined
+        # in a sibling module).
+        run: |
+          docker compose --env-file /tmp/spirens.env \
+            -f compose/single-host/compose.yml config --quiet
+
+      - name: Validate single-host optional modules (standalone)
+        run: |
+          for f in compose/single-host/optional/compose.*.yml; do
+            echo "--- $f"
+            docker compose --env-file /tmp/spirens.env -f "$f" config --quiet
+          done
+
+      - name: Validate swarm stacks (standalone — each deployed separately)
+        run: |
+          for f in compose/swarm/stack.*.yml compose/swarm/optional/stack.*.yml; do
+            echo "--- $f"
+            docker compose --env-file /tmp/spirens.env -f "$f" config --quiet
+          done

@@ -1,0 +1,46 @@
+# =============================================================================
+#  DNS sync — Swarm variant
+# =============================================================================
+#  Swarm doesn't build images from compose — push the image from the single-host
+#  build first:
+#      docker compose -f compose/single-host/optional/compose.dns-sync.yml build
+#      docker tag spirens/dns-sync:local  <your-registry>/spirens/dns-sync:latest
+#      docker push <your-registry>/spirens/dns-sync:latest
+#  then adjust the image: line below.
+#
+#  records.yaml is shipped as a Docker config so any node can run the service.
+#  Prerequisite (or let scripts/bootstrap.sh --swarm do it):
+#      docker config create spirens_dns_records config/dns/records.yaml
+# =============================================================================
+---
+services:
+  dns-sync:
+    image: spirens/dns-sync:local   # replace with your registry URL
+    environment:
+      BASE_DOMAIN: "${BASE_DOMAIN}"
+      CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
+      PUBLIC_IP: "${PUBLIC_IP:-auto}"
+      DNS_SYNC_INTERVAL: "${DNS_SYNC_INTERVAL:-1h}"
+      RECORDS_FILE: /records.yaml
+    configs:
+      - source: spirens_dns_records
+        target: /records.yaml
+    networks:
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 64M
+
+configs:
+  spirens_dns_records:
+    external: true
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

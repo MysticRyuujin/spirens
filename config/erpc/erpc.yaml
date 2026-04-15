@@ -1,0 +1,122 @@
+# =============================================================================
+#  eRPC — SPIRENS MVP configuration
+# =============================================================================
+#  Docs:     https://docs.erpc.cloud
+#  Source:   https://github.com/erpc/erpc
+#
+#  This file is deliberately small. eRPC has many more levers — per-chain
+#  finality policies, Redis caching tiers, hedging, per-budget rate limits,
+#  selection scripts. Add them when you need them; upstream docs cover it
+#  better than we ever could. Start here, grow from here.
+#
+#  Key design choices for the MVP:
+#    - ONE project (`main`) exposing Ethereum mainnet
+#    - Local node is the primary upstream (uncommented); vendors are fallback
+#    - Single in-memory cache tier; no Redis by default
+#    - Retries + circuit-breaker for failover; no hedging
+#    - Each vendor has its own rate-limit budget so one provider can't be
+#      "punished" with global traffic when it's healthy
+# =============================================================================
+---
+logLevel: info
+
+server:
+  httpHostV4: "0.0.0.0"
+  httpPort: 8545
+
+metrics:
+  enabled: true
+  hostV4: "0.0.0.0"
+  port: 4001
+
+# ─── Rate-limiter budgets (referenced from upstreams below) ─────────────────
+rateLimiters:
+  budgets:
+    - id: default
+      rules:
+        - method: "*"
+          maxCount: 500
+          period: 1s
+    - id: vendor-generous
+      rules:
+        - method: "*"
+          maxCount: 25
+          period: 1s
+    - id: vendor-strict
+      rules:
+        - method: "*"
+          maxCount: 5
+          period: 1s
+
+projects:
+  - id: main
+
+    # Failsafe policies applied to every upstream in this project.
+    failsafe:
+      - matchMethod: "*"
+        retry:
+          maxAttempts: 2
+          delay: 500ms
+          backoffMaxDelay: 2s
+          backoffFactor: 2
+        circuitBreaker:
+          failureThresholdCount: 20
+          failureThresholdCapacity: 100
+          halfOpenAfter: 30s
+
+    upstreams:
+
+      # ─── PRIMARY: your own Ethereum node ─────────────────────────────────
+      # Set ETH_LOCAL_URL in .env:
+      #   host-run node:  http://host.docker.internal:8545
+      #   LAN-run node:   http://192.168.1.50:8545
+      # See docs/05-ethereum-node.md for how to run one.
+      # Leave ETH_LOCAL_URL empty to skip this upstream entirely.
+      - endpoint: "${ETH_LOCAL_URL}"
+        evm:
+          chainId: 1
+        rateLimitBudget: default
+        # Higher = preferred. eRPC routes to the highest-scored healthy upstream.
+        # Local nodes should win decisively when healthy.
+        # (Scoring is optional — without it, upstreams are tried in declared order.)
+
+      # ─── FALLBACK: vendor providers ─────────────────────────────────────
+      # Uncomment the ones you want active AND set their API key in .env.
+      #
+      # - endpoint: "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+      #   evm: { chainId: 1 }
+      #   rateLimitBudget: vendor-generous
+      #
+      # - endpoint: "https://rpc.ankr.com/eth/${ANKR_API_KEY}"
+      #   evm: { chainId: 1 }
+      #   rateLimitBudget: vendor-generous
+      #
+      # - endpoint: "https://mainnet.infura.io/v3/${INFURA_API_KEY}"
+      #   evm: { chainId: 1 }
+      #   rateLimitBudget: vendor-strict
+
+      # ─── ADDING MORE CHAINS ────────────────────────────────────────────
+      # Copy the upstream block above and change chainId. Common IDs:
+      #   Base:        8453    (endpoint: https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY})
+      #   Arbitrum:    42161   (endpoint: https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY})
+      #   Optimism:    10
+      #   Polygon:     137
+      # Then query via e.g. POST https://rpc.example.com/main/evm/8453
+      #
+      # Request routing: the path after the project id selects the chain —
+      # /main/evm/1 or /main/evm?chainId=1 work; eRPC infers from the chainId.
+
+# ─── Optional: Redis cache ──────────────────────────────────────────────────
+# Disabled by default. To enable, uncomment AND include
+# compose/single-host/optional/compose.redis.yml.
+#
+# database:
+#   evmJsonRpcCache:
+#     connectors:
+#       - id: memory
+#         driver: memory
+#         memory: { maxItems: 50000 }
+#       - id: redis
+#         driver: redis
+#         redis:
+#           uri: "redis://:${REDIS_PASSWORD}@redis:6379/0"

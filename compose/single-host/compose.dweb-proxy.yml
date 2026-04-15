@@ -1,0 +1,83 @@
+# =============================================================================
+#  dweb-proxy — ENS → IPFS bridge (single-host)
+# =============================================================================
+#  ghcr.io/ethlimo/dweb-proxy-api resolves ENS contenthash records via
+#  Ethereum RPC, then either:
+#    - sends the client a redirect to ${cid}.ipfs.${IPFS_GATEWAY_HOST} (port 8080)
+#    - or answers DNS-over-HTTPS queries for .eth DNSLink (port 11000)
+#
+#  Requires LIMO_HOSTNAME_SUBSTITUTION_CONFIG — a base64-encoded mapping of
+#  your eth-gateway hostname to the TLD to resolve. Source of truth lives
+#  in config/dweb-proxy/hostname-map.json; scripts/encode-hostname-map.sh
+#  turns that into the base64 blob this container wants.
+#
+#  The scripts/up.sh wrapper sets LIMO_HOSTNAME_SUBSTITUTION_CONFIG in the
+#  environment before `docker compose up` — you rarely invoke that script
+#  by hand.
+# =============================================================================
+---
+services:
+  dweb-proxy:
+    image: ghcr.io/ethlimo/dweb-proxy-api:main
+    container_name: spirens-dweb-proxy
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      LISTEN_PORT: "8080"
+
+      # Resolve ENS via our own eRPC endpoint — closes the loop.
+      ETH_RPC_ENDPOINT: "https://${ERPC_HOST}/main/evm/1"
+
+      # Public IPFS gateway; used in X-Content-Location headers sent to clients.
+      IPFS_TARGET: "https://${IPFS_GATEWAY_HOST}"
+      # Internal Kubo API — only reachable on the backend bridge network.
+      IPFS_KUBO_API_URL: "http://ipfs:5001"
+      IPFS_SUBDOMAIN_SUPPORT: "true"
+
+      # base64 JSON mapping, e.g. {"eth.example.com":"eth"}
+      LIMO_HOSTNAME_SUBSTITUTION_CONFIG: "${LIMO_HOSTNAME_SUBSTITUTION_CONFIG}"
+
+      # DNS-over-HTTPS for Kubo's DNS.Resolvers (see scripts/configure-ipfs.sh)
+      DNSQUERY_ENABLED: "true"
+      DNSQUERY_LISTEN_PORT: "11000"
+
+      # Redis is REQUIRED by dweb-proxy (caches resolved ENS records + rate
+      # limits — see upstream README). Fails loudly if the var is missing.
+      REDIS_URL: "${REDIS_URL:?REDIS_URL unset — did scripts/up.sh derive it from REDIS_PASSWORD?}"
+      CACHE_TTL: "300"
+
+      LOG_LEVEL: "info"
+
+    networks:
+      - frontend
+      - backend
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=spirens_frontend"
+
+      # ─── ENS gateway — *.eth.${BASE_DOMAIN} ─────────────────────────
+      - "traefik.http.routers.dweb.rule=HostRegexp(`^.+\\.${DWEB_ETH_HOST:?unset}$`)"
+      - "traefik.http.routers.dweb.entrypoints=websecure"
+      - "traefik.http.routers.dweb.tls.certresolver=le"
+      - "traefik.http.routers.dweb.tls.domains[0].main=${DWEB_ETH_HOST}"
+      - "traefik.http.routers.dweb.tls.domains[0].sans=*.${DWEB_ETH_HOST}"
+      - "traefik.http.routers.dweb.middlewares=security-headers@file"
+      - "traefik.http.routers.dweb.service=dweb-proxy-http"
+      - "traefik.http.services.dweb-proxy-http.loadbalancer.server.port=8080"
+
+      # ─── DoH endpoint — ens-resolver.${BASE_DOMAIN} ─────────────────
+      - "traefik.http.routers.dweb-doh.rule=Host(`${DWEB_RESOLVER_HOST}`)"
+      - "traefik.http.routers.dweb-doh.entrypoints=websecure"
+      - "traefik.http.routers.dweb-doh.tls.certresolver=le"
+      - "traefik.http.routers.dweb-doh.service=dweb-proxy-doh"
+      - "traefik.http.services.dweb-proxy-doh.loadbalancer.server.port=11000"
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

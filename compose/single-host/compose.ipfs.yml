@@ -1,0 +1,77 @@
+# =============================================================================
+#  IPFS Kubo — single-host
+# =============================================================================
+#  Content-addressed storage with two HTTP endpoints:
+#    - :8080 — public gateway (fronted by Traefik)
+#    - :5001 — API (write-access; bound to 127.0.0.1 ONLY; never exposed)
+#
+#  Post-deploy config (CORS, custom gateway domain, .eth DNS resolver) is
+#  applied by scripts/configure-ipfs.sh, which ./scripts/up.sh runs
+#  automatically on first boot.
+#
+#  IPFS_PROFILE=server,pebbleds:
+#    - server   : disables MDNS & NAT port mapping; appropriate for headless
+#    - pebbleds : PebbleDB datastore — faster than the default LevelDB at
+#                 the cost of needing a migration when switching.
+# =============================================================================
+---
+services:
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: spirens-ipfs
+    restart: unless-stopped
+    environment:
+      IPFS_PROFILE: "server,pebbleds"
+    ports:
+      # Swarm ports — must be reachable from the internet for peering.
+      # If behind NAT, forward these through your router.
+      - "4001:4001/tcp"
+      - "4001:4001/udp"
+      # API — loopback only. The Docker bridge network exposes it to other
+      # containers on `spirens_backend` via the `ipfs:5001` DNS name.
+      - "127.0.0.1:5001:5001"
+      # Gateway (8080) stays INTERNAL — Traefik reaches it via the bridge
+      # network, not via a host port. No port binding here.
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - frontend
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=spirens_frontend"
+
+      # ─── Path-style gateway: ipfs.example.com/ipfs/{cid} ────────
+      - "traefik.http.routers.ipfs.rule=Host(`${IPFS_GATEWAY_HOST}`)"
+      - "traefik.http.routers.ipfs.entrypoints=websecure"
+      - "traefik.http.routers.ipfs.tls.certresolver=le"
+      # Wildcard cert covers both the root and subdomain form.
+      - "traefik.http.routers.ipfs.tls.domains[0].main=${IPFS_GATEWAY_HOST}"
+      - "traefik.http.routers.ipfs.tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}"
+      - "traefik.http.routers.ipfs.middlewares=security-headers@file,cors-web3@file"
+      - "traefik.http.routers.ipfs.service=ipfs"
+
+      # ─── Subdomain-style: {cid}.ipfs.example.com ────────────────
+      # Kubo's subdomain gateway does the redirect/rewrite server-side;
+      # Traefik only needs to route any *.ipfs.${BASE_DOMAIN} host to :8080.
+      - "traefik.http.routers.ipfs-sub.rule=HostRegexp(`^.+\\.${IPFS_GATEWAY_HOST:?unset}$`)"
+      - "traefik.http.routers.ipfs-sub.entrypoints=websecure"
+      - "traefik.http.routers.ipfs-sub.tls.certresolver=le"
+      - "traefik.http.routers.ipfs-sub.tls.domains[0].main=${IPFS_GATEWAY_HOST}"
+      - "traefik.http.routers.ipfs-sub.tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}"
+      - "traefik.http.routers.ipfs-sub.middlewares=security-headers@file,cors-web3@file"
+      - "traefik.http.routers.ipfs-sub.service=ipfs"
+
+      - "traefik.http.services.ipfs.loadbalancer.server.port=8080"
+
+volumes:
+  ipfs_data:
+    name: spirens_ipfs_data
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

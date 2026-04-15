@@ -1,0 +1,57 @@
+# =============================================================================
+#  dweb-proxy — Swarm
+# =============================================================================
+---
+services:
+  dweb-proxy:
+    # In Swarm, `depends_on` is ignored at the stack level — deploy the
+    # `spirens-redis` stack BEFORE `spirens-dweb-proxy`. ./scripts/up.sh
+    # orders them automatically.
+    image: ghcr.io/ethlimo/dweb-proxy-api:main
+    environment:
+      LISTEN_PORT: "8080"
+      ETH_RPC_ENDPOINT: "https://${ERPC_HOST}/main/evm/1"
+      IPFS_TARGET: "https://${IPFS_GATEWAY_HOST}"
+      IPFS_KUBO_API_URL: "http://ipfs:5001"
+      IPFS_SUBDOMAIN_SUPPORT: "true"
+      LIMO_HOSTNAME_SUBSTITUTION_CONFIG: "${LIMO_HOSTNAME_SUBSTITUTION_CONFIG}"
+      DNSQUERY_ENABLED: "true"
+      DNSQUERY_LISTEN_PORT: "11000"
+      # Redis is REQUIRED (ENS resolution cache + rate limits).
+      REDIS_URL: "${REDIS_URL:?REDIS_URL must be set}"
+      CACHE_TTL: "300"
+      LOG_LEVEL: "info"
+    networks:
+      - frontend
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=spirens_frontend"
+
+        - "traefik.http.routers.dweb.rule=HostRegexp(`^.+\\.${DWEB_ETH_HOST:?unset}$`)"
+        - "traefik.http.routers.dweb.entrypoints=websecure"
+        - "traefik.http.routers.dweb.tls.certresolver=le"
+        - "traefik.http.routers.dweb.tls.domains[0].main=${DWEB_ETH_HOST}"
+        - "traefik.http.routers.dweb.tls.domains[0].sans=*.${DWEB_ETH_HOST}"
+        - "traefik.http.routers.dweb.middlewares=security-headers@file"
+        - "traefik.http.routers.dweb.service=dweb-proxy-http"
+        - "traefik.http.services.dweb-proxy-http.loadbalancer.server.port=8080"
+
+        - "traefik.http.routers.dweb-doh.rule=Host(`${DWEB_RESOLVER_HOST}`)"
+        - "traefik.http.routers.dweb-doh.entrypoints=websecure"
+        - "traefik.http.routers.dweb-doh.tls.certresolver=le"
+        - "traefik.http.routers.dweb-doh.service=dweb-proxy-doh"
+        - "traefik.http.services.dweb-proxy-doh.loadbalancer.server.port=11000"
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true

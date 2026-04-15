@@ -1,0 +1,41 @@
+# =============================================================================
+#  Redis — Swarm
+# =============================================================================
+#  Required by dweb-proxy (ENS resolution cache + rate limits). Deploy
+#  before dweb-proxy.
+# =============================================================================
+---
+services:
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"
+      - --maxmemory
+      - "256mb"
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "no"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+
+volumes:
+  redis_data:
+    name: spirens_redis_data
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

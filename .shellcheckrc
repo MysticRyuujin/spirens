@@ -1,0 +1,4 @@
+# Disable SC1091 globally: all our scripts `source .env`, which lives
+# outside the repo at runtime. The per-file `# shellcheck disable=SC1091`
+# comments only suppress warning-level; this kills info-level too.
+disable=SC1091

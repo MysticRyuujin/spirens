@@ -1,0 +1,79 @@
+# =============================================================================
+#  SPIRENS — pre-commit
+# =============================================================================
+#  Install once:
+#     pipx install pre-commit     (or: brew install pre-commit, pip install --user pre-commit)
+#     pre-commit install          (installs .git/hooks/pre-commit)
+#
+#  Run on all files any time:
+#     pre-commit run --all-files
+#
+#  CI runs the same set via .github/workflows/lint.yml.
+# =============================================================================
+---
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # ─── Basic hygiene ─────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$  # markdown trailing spaces can be meaningful
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^(config/erpc/|compose/).*\.ya?ml$ # interpolation breaks the parser
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  # ─── YAML lint (Traefik/Compose/config) ────────────────────────────────────
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint.yml]
+
+  # ─── Markdown lint ─────────────────────────────────────────────────────────
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.14.0
+    hooks:
+      - id: markdownlint-cli2
+        args: [--config, .markdownlint.json]
+
+  # ─── Shell: shellcheck + shfmt ─────────────────────────────────────────────
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.10.0-2
+    hooks:
+      - id: shfmt
+        args: [-i, "4", -ci, -sr, -w]
+
+  # ─── Prettier (JSON, MD, YAML where safe) ──────────────────────────────────
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.3.3
+    hooks:
+      - id: prettier
+        types_or: [json, markdown]
+        # YAML intentionally omitted — prettier's YAML formatter rewrites
+        # comments we rely on for the educational docs.
+
+  # ─── Ruff (Python lint + format) ───────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

@@ -1,0 +1,122 @@
+# =============================================================================
+#  Ethereum EL + CL reference — Geth + Lighthouse
+# =============================================================================
+#  Activate:
+#    cp compose.ethereum.yml.example compose.ethereum.yml
+#    $EDITOR compose.ethereum.yml   # set ETH_DATA_DIR, optionally FEE_RECIPIENT
+#    # then uncomment the include in compose/single-host/compose.yml
+#
+#  Notes:
+#    - Host networking on both services: P2P latency matters, and Docker's
+#      default bridge adds enough overhead to hurt validator attestation windows.
+#    - 127.0.0.1 binds only: eRPC (in the Docker bridge) reaches the EL via
+#      `host.docker.internal:8545`; nothing else should hit these directly.
+#    - Shared JWT secret: a one-time generation by the `jwt` init container.
+#    - Pinned client versions: bumping is a deliberate act, not an auto-update.
+#    - Checkpoint-sync URL: Lighthouse starts from a recent finalized state
+#      instead of syncing from genesis (hours, not weeks).
+#
+#  Disk: set ETH_DATA_DIR to a ≥ 2 TB NVMe mount. 4 TB recommended.
+# =============================================================================
+---
+services:
+  eth-jwt-init:
+    # One-shot: generate the JWT secret if it doesn't exist. Both EL and CL
+    # depend_on this so it runs before they start.
+    image: alpine:3.20
+    container_name: spirens-eth-jwt
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        mkdir -p /shared
+        if [ ! -f /shared/jwt.hex ]; then
+          head -c32 /dev/urandom | od -A n -t x1 | tr -d ' \n' > /shared/jwt.hex
+          chmod 600 /shared/jwt.hex
+          echo "generated JWT secret"
+        else
+          echo "JWT secret already present"
+        fi
+    volumes:
+      - eth_shared:/shared
+    restart: "no"
+
+  geth:
+    image: ethereum/client-go:v1.14.12
+    container_name: spirens-geth
+    restart: unless-stopped
+    stop_grace_period: 5m
+    depends_on:
+      eth-jwt-init:
+        condition: service_completed_successfully
+    network_mode: host
+    volumes:
+      - "${ETH_DATA_DIR}/geth:/data"
+      - eth_shared:/shared
+    command:
+      - --mainnet
+      - --datadir=/data
+      - --syncmode=snap
+      - --cache=8192
+      # HTTP JSON-RPC — bind loopback only, eRPC reaches via host-gateway
+      - --http
+      - --http.addr=127.0.0.1
+      - --http.port=8545
+      - --http.vhosts=localhost,host.docker.internal
+      - --http.api=eth,net,web3,txpool
+      # WebSocket (optional; enable if your app wants subscriptions)
+      - --ws
+      - --ws.addr=127.0.0.1
+      - --ws.port=8546
+      - --ws.api=eth,net,web3
+      # Auth RPC — CL talks to EL over this, with JWT
+      - --authrpc.addr=127.0.0.1
+      - --authrpc.port=8551
+      - --authrpc.vhosts=localhost
+      - --authrpc.jwtsecret=/shared/jwt.hex
+      # Metrics
+      - --metrics
+      - --metrics.addr=127.0.0.1
+      - --metrics.port=6060
+    # Geth is I/O-heavy on first sync. Give it room:
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  lighthouse:
+    image: sigp/lighthouse:v5.3.0
+    container_name: spirens-lighthouse
+    restart: unless-stopped
+    stop_grace_period: 5m
+    depends_on:
+      eth-jwt-init:
+        condition: service_completed_successfully
+    network_mode: host
+    volumes:
+      - "${ETH_DATA_DIR}/lighthouse:/data"
+      - eth_shared:/shared
+    command:
+      - lighthouse
+      - bn                              # beacon node (not validator)
+      - --network=mainnet
+      - --datadir=/data
+      - --execution-endpoint=http://localhost:8551
+      - --execution-jwt=/shared/jwt.hex
+      - --http
+      - --http-address=127.0.0.1
+      - --http-port=5052
+      # Start from a recent finalized checkpoint instead of genesis
+      # (pick any checkpoint provider; this one is community-run).
+      - --checkpoint-sync-url=https://mainnet.checkpoint.sigp.io
+      - --disable-deposit-contract-sync
+      # Validator fee recipient (only matters if you later add a validator)
+      # - --suggested-fee-recipient=${FEE_RECIPIENT}
+      - --metrics
+      - --metrics-address=127.0.0.1
+      - --metrics-port=5054
+
+volumes:
+  eth_shared:
+    name: spirens_eth_shared

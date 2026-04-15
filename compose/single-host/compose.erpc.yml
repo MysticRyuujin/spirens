@@ -1,0 +1,57 @@
+# =============================================================================
+#  eRPC — single-host
+# =============================================================================
+#  JSON-RPC proxy with cache + failover. Reads its config from
+#  ../../config/erpc/erpc.yaml (read-only mount).
+#
+#  The `extra_hosts` entry gives the container an `host.docker.internal` name
+#  that resolves to the Docker host — useful when your Ethereum node runs on
+#  the same machine but outside Docker. On Docker Desktop this is automatic;
+#  on Linux we set it explicitly.
+# =============================================================================
+---
+services:
+  erpc:
+    image: ghcr.io/erpc/erpc:latest
+    container_name: spirens-erpc
+    restart: unless-stopped
+    command:
+      - /erpc-server
+      - /etc/erpc/erpc.yaml
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      - ../../config/erpc/erpc.yaml:/etc/erpc/erpc.yaml:ro
+
+    environment:
+      # Pull through values needed by the YAML. eRPC's config templating
+      # reads ${VAR} directly from process env.
+      ETH_LOCAL_URL:      "${ETH_LOCAL_URL:-}"
+      ALCHEMY_API_KEY:    "${ALCHEMY_API_KEY:-}"
+      ANKR_API_KEY:       "${ANKR_API_KEY:-}"
+      QUICKNODE_API_KEY:  "${QUICKNODE_API_KEY:-}"
+      INFURA_API_KEY:     "${INFURA_API_KEY:-}"
+      REDIS_PASSWORD:     "${REDIS_PASSWORD:-}"
+
+    networks:
+      - frontend
+      - backend
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=spirens_frontend"
+      - "traefik.http.routers.erpc.rule=Host(`${ERPC_HOST}`)"
+      - "traefik.http.routers.erpc.entrypoints=websecure"
+      - "traefik.http.routers.erpc.tls.certresolver=le"
+      - "traefik.http.routers.erpc.middlewares=security-headers@file,cors-web3@file"
+      - "traefik.http.services.erpc.loadbalancer.server.port=8545"
+
+networks:
+  frontend:
+    name: spirens_frontend
+    external: true
+  backend:
+    name: spirens_backend
+    external: true
