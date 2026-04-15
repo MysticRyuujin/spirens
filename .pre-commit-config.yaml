@@ -16,7 +16,7 @@ default_install_hook_types: [pre-commit, commit-msg]
 repos:
   # ─── Basic hygiene ─────────────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: \.md$  # markdown trailing spaces can be meaningful
@@ -37,33 +37,33 @@ repos:
 
   # ─── YAML lint (Traefik/Compose/config) ────────────────────────────────────
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
         args: [-c, .yamllint.yml]
 
   # ─── Markdown lint ─────────────────────────────────────────────────────────
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.14.0
+    rev: v0.22.0
     hooks:
       - id: markdownlint-cli2
         args: [--config, .markdownlint.json]
 
   # ─── Shell: shellcheck + shfmt ─────────────────────────────────────────────
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
 
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.10.0-2
+    rev: v3.13.1-1
     hooks:
       - id: shfmt
         args: [-i, "4", -ci, -sr, -w]
 
   # ─── Prettier (JSON, MD, YAML where safe) ──────────────────────────────────
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.3.3
+    rev: v3.8.3
     hooks:
       - id: prettier
         types_or: [json, markdown]
@@ -72,7 +72,7 @@ repos:
 
   # ─── Ruff (Python lint + format) ───────────────────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.15.10
     hooks:
       - id: ruff
         args: [--fix]
