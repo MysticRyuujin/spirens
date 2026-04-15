@@ -22,6 +22,12 @@ concurrency:
 
 jobs:
   # ─── All-in-one via pre-commit ─────────────────────────────────────────────
+  #
+  # We inline what pre-commit/action@v3.0.1 does (install pre-commit, cache
+  # its hook environments, run it) instead of calling the action directly.
+  # Reason: pre-commit/action pins actions/cache@v4, which runs on Node.js 20
+  # (deprecated). Calling actions/cache@v5 ourselves avoids the warning and
+  # doesn't add meaningful code.
   pre-commit:
     name: pre-commit
     runs-on: ubuntu-latest
@@ -29,13 +35,21 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
       - name: Install shfmt (needed by the shfmt hook)
         run: |
           sudo apt-get update
           sudo apt-get install -y shfmt
-      - uses: pre-commit/action@v3.0.1
+      - name: Install pre-commit
+        run: python -m pip install --upgrade pre-commit
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ env.pythonLocation }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
 
   # ─── Compose validation (single-host + swarm) ──────────────────────────────
   compose-validate:
