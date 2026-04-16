@@ -69,6 +69,40 @@ Format:
 - **Suggested fix:** rename to `to_list`.
 - **Status:** fixed — renamed, with a `to_dict` alias for back-compat.
 
+## 05_up_single: `Gateway.PublicGateways` config applied but Kubo not restarted — subdomain gateway returns 404
+
+- **Severity:** bug (SPIRENS)
+- **Repro:** `spirens up single`; curl `https://<cid>.ipfs.<base>/` once the
+  stack is up.
+- **Expected:** 200 with IPFS content.
+- **Actual:** 404. Traefik logs show the request routed to Kubo
+  (`ServiceName: ipfs@docker`) but Kubo returned 404 because the
+  subdomain gateway entries in `Gateway.PublicGateways` are only
+  consulted at process startup — writing to them live via the HTTP API
+  persists the value but doesn't rebuild the router table.
+- **Suggested fix:** after `kubo.apply_spirens_config(...)`,
+  `spirens up` should restart the container the same way
+  `spirens configure-ipfs` already does.
+- **Status:** fixed in `src/spirens/commands/up.py` — the restart now
+  runs as part of `up` (unless `--dry-run`).
+
+## infra: Let's Encrypt prod rate limit exceeded during iterative E2E testing
+
+- **Severity:** UX (testability)
+- **Repro:** run the full E2E against a fresh zone 5+ times in a week.
+  Traefik logs report `429 urn:ietf:params:acme:error:rateLimited ::
+too many certificates (5) already issued for this exact set of
+identifiers in the last 168h0m0s`.
+- **Expected:** E2E-friendly path that doesn't exhaust the 5-per-week
+  prod quota.
+- **Suggested fix:** first-class LE staging support.
+- **Status:** fixed — new `ACME_CA_SERVER` env var wires through to
+  `--certificatesresolvers.le.acme.caserver` on Traefik. Both compose
+  files default to LE prod when unset; the harness fixture sets
+  `https://acme-staging-v02.api.letsencrypt.org/directory`. Also added
+  `spirens health --insecure` (auto-on when `ACME_CA_SERVER` contains
+  `staging`) so the health checks pass against the Fake LE root.
+
 ## post-ACME: orphan `_acme-challenge.*` TXT records left on the zone
 
 - **Severity:** bug (Traefik/lego interaction — likely upstream)

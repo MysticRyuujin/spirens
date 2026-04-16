@@ -62,9 +62,7 @@ def test_ensure_htpasswd_custom_user(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("existing_content", ["admin:$2y$12$abc", "admin:plaintext"])
-def test_ensure_htpasswd_does_not_clobber_existing(
-    tmp_path: Path, existing_content: str
-) -> None:
+def test_ensure_htpasswd_does_not_clobber_existing(tmp_path: Path, existing_content: str) -> None:
     d = tmp_path / "secrets"
     d.mkdir()
     secret = d / "traefik_dashboard_htpasswd"

@@ -6,6 +6,11 @@ DEPLOYMENT_PROFILE=internal
 BASE_DOMAIN=${BASE_DOMAIN}
 ACME_EMAIL=${ACME_EMAIL}
 
+# E2E uses LE staging CA to avoid the 5-certs-per-identifier-per-week
+# prod rate limit. Staging certs chain to 'Fake LE Intermediate X1' —
+# 'spirens health' auto-flips to --insecure when this is set.
+ACME_CA_SERVER=https://acme-staging-v02.api.letsencrypt.org/directory
+
 # DNS provider — we always test against Cloudflare in E2E.
 DNS_PROVIDER=cloudflare
 CF_API_EMAIL=${CF_API_EMAIL}

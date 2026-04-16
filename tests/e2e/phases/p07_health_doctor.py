@@ -21,9 +21,18 @@ HEALTH_POLL_S = 15.0
 
 
 def _health_once(ctx: Context) -> list[dict[str, object]]:
+    # --insecure is safe here because on internal profile we're testing
+    # against LE staging certs (Fake LE root not in system trust store).
+    # The health command also auto-flips insecure when ACME_CA_SERVER
+    # mentions 'staging', but passing it explicitly makes the phase
+    # tolerant of either prod or staging configurations.
     r = ssh_run(
         ctx.env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens health --json"],
+        [
+            "bash",
+            "-lc",
+            f"cd {REMOTE_REPO} && .venv/bin/spirens health --json --insecure",
+        ],
         capture=True,
         check=False,
     )

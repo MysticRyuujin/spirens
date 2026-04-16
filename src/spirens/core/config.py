@@ -22,6 +22,14 @@ class SpirensConfig(BaseModel):
     # --- Required --------------------------------------------------------
     base_domain: str = Field(..., description="Apex domain (e.g. example.com)")
     acme_email: str = Field(..., description="Let's Encrypt registration email")
+    acme_ca_server: str = Field(
+        default="",
+        description=(
+            "ACME CA directory URL. Empty = Let's Encrypt production. Set to "
+            "https://acme-staging-v02.api.letsencrypt.org/directory for dev / "
+            "E2E to avoid the 5-certs-per-week-per-identifier prod rate limit."
+        ),
+    )
     traefik_dashboard_host: str = Field(default="", description="Traefik dashboard FQDN")
 
     # --- DNS provider ----------------------------------------------------

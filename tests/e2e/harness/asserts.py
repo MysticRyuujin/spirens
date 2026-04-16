@@ -57,7 +57,10 @@ def curl_json(
     *,
     headers: Mapping[str, str] | None = None,
 ) -> object:
-    argv = ["curl", "-sS", *_resolve(host, ip)]
+    # -k: the harness targets LE-staging certs on the internal profile
+    # (Fake LE Intermediate isn't in the system trust store). Same as
+    # curl_status; keep the two helpers consistent.
+    argv = ["curl", "-sS", "-k", *_resolve(host, ip)]
     hdrs = {"content-type": "application/json"}
     if headers:
         hdrs.update(headers)

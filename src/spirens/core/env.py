@@ -99,4 +99,6 @@ def build_env(config: SpirensConfig, env_path: Path) -> dict[str, str]:
 
     env["PUBLIC_IP"] = config.public_ip
     env["DNS_SYNC_INTERVAL"] = config.dns_sync_interval
+    if config.acme_ca_server:
+        env["ACME_CA_SERVER"] = config.acme_ca_server
     return env

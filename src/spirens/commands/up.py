@@ -98,6 +98,14 @@ def up(
         )
         kubo.apply_spirens_config(config.ipfs_gateway_host, doh_url, runner=runner)
 
+        # Gateway.PublicGateways (and DNS.Resolvers) are read at Kubo startup;
+        # a live-written change via /api/v0/config persists but doesn't apply
+        # until restart. Without this restart, {cid}.ipfs.$BASE requests hit
+        # Kubo but return 404 because the subdomain-gateway routing table
+        # was built before our config write landed.
+        if not dry_run:
+            kubo.restart_container(runner=runner)
+
     log("up complete")
     if not dry_run:
         typer.echo(f"""

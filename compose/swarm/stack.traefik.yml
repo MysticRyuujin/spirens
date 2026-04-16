@@ -53,6 +53,10 @@ services:
       - --providers.file.watch=true
 
       # ── ACME (Let's Encrypt via DNS-01)
+      # caserver defaults to LE production. Set ACME_CA_SERVER in .env to
+      # https://acme-staging-v02.api.letsencrypt.org/directory when iterating
+      # to avoid the 5-certs-per-week-per-identifier rate limit on prod.
+      - --certificatesresolvers.le.acme.caserver=${ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.le.acme.dnschallenge=true

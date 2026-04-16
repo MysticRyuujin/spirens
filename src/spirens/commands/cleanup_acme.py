@@ -45,9 +45,7 @@ def cleanup_acme_txt(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Print what would be deleted; make no changes.")
     ] = False,
-    yes: Annotated[
-        bool, typer.Option("--yes", "-y", help="Skip the confirmation prompt.")
-    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip the confirmation prompt.")] = False,
 ) -> None:
     """Delete orphan _acme-challenge.* TXT records on the active zone."""
     repo_root = _find_repo_root()

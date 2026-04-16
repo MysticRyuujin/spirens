@@ -122,10 +122,11 @@ def _check_http(
     headers: dict[str, str] | None = None,
     content: str | None = None,
     method: str = "GET",
+    verify: bool = True,
 ) -> httpx.Response | None:
     """Make an HTTP request and record pass/fail."""
     try:
-        with httpx.Client(timeout=timeout, verify=True, follow_redirects=False) as client:
+        with httpx.Client(timeout=timeout, verify=verify, follow_redirects=False) as client:
             if method == "POST" and content:
                 resp = client.post(url, content=content, headers=headers or {})
             else:
@@ -141,18 +142,40 @@ def _check_http(
         return None
 
 
-def _check_cert(report: HealthReport, host: str) -> None:
-    """Check TLS certificate validity."""
+def _check_cert(report: HealthReport, host: str, *, verify: bool = True) -> None:
+    """Check TLS certificate validity. When ``verify`` is False we still
+    record the issuer/expiry, just without requiring a trusted root —
+    useful when Traefik is configured with the LE staging CA whose root
+    isn't in the system trust store."""
     try:
-        ctx = ssl.create_default_context()
+        ctx = ssl.create_default_context() if verify else ssl._create_unverified_context()
         with (
             socket.create_connection((host, 443), timeout=10) as sock,
             ctx.wrap_socket(sock, server_hostname=host) as ssock,
         ):
-            cert = ssock.getpeercert()
+            # getpeercert() returns {} on unverified contexts; use the DER
+            # form and parse ourselves when that's the case.
+            cert = ssock.getpeercert() or ssock.getpeercert(binary_form=False)
             if not cert:
-                report.add(f"cert {host}", False, "no cert returned")
-                return
+                der = ssock.getpeercert(binary_form=True)
+                if der is None:
+                    report.add(f"cert {host}", False, "no cert returned")
+                    return
+                # Unverified context doesn't populate the dict form; decode
+                # via a tempfile so ssl._ssl._test_decode_cert can parse it.
+                import tempfile
+
+                pem = ssl.DER_cert_to_PEM_cert(der)
+                with tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False) as fh:
+                    fh.write(pem)
+                    path = fh.name
+                try:
+                    cert = ssl._ssl._test_decode_cert(path)  # type: ignore[attr-defined]
+                finally:
+                    import os
+
+                    os.unlink(path)
+            assert cert is not None
             issuer = dict(x[0] for x in cert.get("issuer", []))  # type: ignore[misc]
             not_after = cert.get("notAfter", "unknown")
             org = issuer.get("organizationName", issuer.get("commonName", "unknown"))
@@ -161,7 +184,7 @@ def _check_cert(report: HealthReport, host: str) -> None:
         report.add(f"cert {host}", False, str(exc))
 
 
-def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
+def _run_checks(config: SpirensConfig, timeout: float, *, verify: bool = True) -> HealthReport:
     report = HealthReport()
 
     # Traefik dashboard — expects 401 (auth required)
@@ -171,13 +194,14 @@ def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
         f"https://{config.traefik_dashboard_host}",
         expected=401,
         timeout=timeout,
+        verify=verify,
     )
-    _check_cert(report, config.traefik_dashboard_host)
+    _check_cert(report, config.traefik_dashboard_host, verify=verify)
 
     # eRPC — eth_chainId should return 0x1
     erpc_url = f"https://{config.erpc_host}/main/evm/1"
     try:
-        with httpx.Client(timeout=timeout, verify=True) as client:
+        with httpx.Client(timeout=timeout, verify=verify) as client:
             resp = client.post(
                 erpc_url,
                 content='{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}',
@@ -190,7 +214,7 @@ def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
             report.add("erpc: eth_chainId", False, f"unexpected: {body[:200]}")
     except Exception as exc:
         report.add("erpc: eth_chainId", False, str(exc))
-    _check_cert(report, config.erpc_host)
+    _check_cert(report, config.erpc_host, verify=verify)
 
     # IPFS gateway — path-style and subdomain-style
     _check_http(
@@ -198,18 +222,20 @@ def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
         f"ipfs: path /ipfs/{HELLO_CID[:12]}...",
         f"https://{config.ipfs_gateway_host}/ipfs/{HELLO_CID}",
         timeout=timeout,
+        verify=verify,
     )
     _check_http(
         report,
         f"ipfs: subdomain {HELLO_CID[:12]}...",
         f"https://{HELLO_CID}.{config.ipfs_gateway_host}/",
         timeout=timeout,
+        verify=verify,
     )
-    _check_cert(report, config.ipfs_gateway_host)
+    _check_cert(report, config.ipfs_gateway_host, verify=verify)
 
     # dweb-proxy ENS — check X-Content-Location header
     try:
-        with httpx.Client(timeout=timeout, verify=True, follow_redirects=False) as client:
+        with httpx.Client(timeout=timeout, verify=verify, follow_redirects=False) as client:
             resp = client.get(f"https://vitalik.{config.dweb_eth_host}/")
         xcl = resp.headers.get("x-content-location", "")
         if "ipfs" in xcl.lower():
@@ -222,7 +248,7 @@ def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
             )
     except Exception as exc:
         report.add("dweb-proxy: ENS resolution", False, str(exc))
-    _check_cert(report, config.dweb_eth_host)
+    _check_cert(report, config.dweb_eth_host, verify=verify)
 
     # dweb-proxy DoH
     if config.dweb_resolver_host:
@@ -232,8 +258,9 @@ def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
             f"https://{config.dweb_resolver_host}/dns-query?name=vitalik.eth&type=TXT",
             headers={"accept": "application/dns-json"},
             timeout=timeout,
+            verify=verify,
         )
-        _check_cert(report, config.dweb_resolver_host)
+        _check_cert(report, config.dweb_resolver_host, verify=verify)
 
     return report
 
@@ -252,6 +279,17 @@ def health(
             ),
         ),
     ] = "",
+    insecure: Annotated[
+        bool,
+        typer.Option(
+            "--insecure",
+            "-k",
+            help=(
+                "Skip TLS verification. Use when ACME_CA_SERVER points at LE "
+                "staging (Fake LE Intermediate isn't in the system trust store)."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Check all public SPIRENS endpoints."""
     repo_root = _find_repo_root()
@@ -271,11 +309,21 @@ def health(
     if not host and config.deployment_profile == "internal":
         host = "127.0.0.1"
 
+    # Staging certs chain to a non-public root; default --insecure on so
+    # operators who flipped ACME_CA_SERVER get a signal without further
+    # thought. Explicit --insecure flag still overrides to True; there's
+    # currently no way to force --insecure=False with a staging CA, which
+    # is fine because that combination can't pass cert validation.
+    if not insecure and "staging" in config.acme_ca_server:
+        insecure = True
+
+    verify = not insecure
+
     if host:
         with _resolve_override(host, _managed_hosts(config)):
-            report = _run_checks(config, timeout)
+            report = _run_checks(config, timeout, verify=verify)
     else:
-        report = _run_checks(config, timeout)
+        report = _run_checks(config, timeout, verify=verify)
 
     if json_output:
         typer.echo(json.dumps(report.to_list(), indent=2))
