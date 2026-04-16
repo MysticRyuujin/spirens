@@ -26,14 +26,22 @@ services:
     environment:
       LISTEN_PORT: "8080"
 
-      # Resolve ENS via our own eRPC endpoint — closes the loop.
-      ETH_RPC_ENDPOINT: "https://${ERPC_HOST}/main/evm/1"
+      # Resolve ENS via our own eRPC endpoint. Use the internal Docker DNS
+      # name so dweb-proxy can reach eRPC regardless of whether
+      # `${ERPC_HOST}` has a public A record (internal profile doesn't).
+      ETH_RPC_ENDPOINT: "http://erpc:8545/main/evm/1"
 
-      # Public IPFS gateway; used in X-Content-Location headers sent to clients.
+      # Public IPFS gateway; used in X-Content-Location headers sent to
+      # clients. We point at the path-style gateway and disable subdomain
+      # support here. Subdomain URLs would have to be `{cid}.ipfs.$BASE`
+      # (covered by our `*.ipfs.$BASE` wildcard cert), but with
+      # `IPFS_GATEWAY_HOST=ipfs.$BASE` dweb-proxy would emit
+      # `{cid}.ipfs.ipfs.$BASE` — a three-label host that our wildcard
+      # does NOT cover. Path-style sidesteps that entirely.
       IPFS_TARGET: "https://${IPFS_GATEWAY_HOST}"
       # Internal Kubo API — only reachable on the backend bridge network.
       IPFS_KUBO_API_URL: "http://ipfs:5001"
-      IPFS_SUBDOMAIN_SUPPORT: "true"
+      IPFS_SUBDOMAIN_SUPPORT: "false"
 
       # base64 JSON mapping, e.g. {"eth.example.com":"eth"}
       LIMO_HOSTNAME_SUBSTITUTION_CONFIG: "${LIMO_HOSTNAME_SUBSTITUTION_CONFIG}"
@@ -58,7 +66,7 @@ services:
       - "traefik.docker.network=spirens_frontend"
 
       # ─── ENS gateway — *.eth.${BASE_DOMAIN} ─────────────────────────
-      - "traefik.http.routers.dweb.rule=HostRegexp(`^.+\\.${DWEB_ETH_HOST:?unset}$`)"
+      - "traefik.http.routers.dweb.rule=HostRegexp(`.+.${DWEB_ETH_HOST:?unset}`)"
       - "traefik.http.routers.dweb.entrypoints=websecure"
       - "traefik.http.routers.dweb.tls.certresolver=le"
       - "traefik.http.routers.dweb.tls.domains[0].main=${DWEB_ETH_HOST}"

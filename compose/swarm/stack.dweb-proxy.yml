@@ -10,10 +10,13 @@ services:
     image: ghcr.io/ethlimo/dweb-proxy-api:main
     environment:
       LISTEN_PORT: "8080"
-      ETH_RPC_ENDPOINT: "https://${ERPC_HOST}/main/evm/1"
+      # Internal DNS — works in both internal and public profiles.
+      ETH_RPC_ENDPOINT: "http://erpc:8545/main/evm/1"
+      # Path-style gateway; subdomain would yield {cid}.ipfs.ipfs.$BASE
+      # (not covered by *.ipfs.$BASE wildcard). See single-host counterpart.
       IPFS_TARGET: "https://${IPFS_GATEWAY_HOST}"
       IPFS_KUBO_API_URL: "http://ipfs:5001"
-      IPFS_SUBDOMAIN_SUPPORT: "true"
+      IPFS_SUBDOMAIN_SUPPORT: "false"
       LIMO_HOSTNAME_SUBSTITUTION_CONFIG: "${LIMO_HOSTNAME_SUBSTITUTION_CONFIG}"
       DNSQUERY_ENABLED: "true"
       DNSQUERY_LISTEN_PORT: "11000"
@@ -33,7 +36,7 @@ services:
         - "traefik.enable=true"
         - "traefik.swarm.network=spirens_frontend"
 
-        - "traefik.http.routers.dweb.rule=HostRegexp(`^.+\\.${DWEB_ETH_HOST:?unset}$`)"
+        - "traefik.http.routers.dweb.rule=HostRegexp(`.+.${DWEB_ETH_HOST:?unset}`)"
         - "traefik.http.routers.dweb.entrypoints=websecure"
         - "traefik.http.routers.dweb.tls.certresolver=le"
         - "traefik.http.routers.dweb.tls.domains[0].main=${DWEB_ETH_HOST}"
