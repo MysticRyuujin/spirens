@@ -11,6 +11,8 @@ from typing import Annotated
 
 import typer
 
+from spirens.core.config import SpirensConfig
+from spirens.core.env import build_env
 from spirens.core.runner import CommandRunner
 from spirens.core.topology import Topology, get_runner
 from spirens.ui.console import log, warn
@@ -51,5 +53,18 @@ def down(
         typer.confirm("Are you sure?", abort=True)
 
     stack = get_runner(topology, runner, repo_root)
-    stack.down(volumes=volumes)
+    # Build the same derived env that `spirens up` uses, so compose can
+    # interpolate required vars (REDIS_URL, LIMO_HOSTNAME_SUBSTITUTION_CONFIG)
+    # whose values don't live in .env. If .env is absent or invalid we just
+    # skip the enrichment — compose will either succeed or surface the same
+    # missing-var error it would have anyway.
+    env: dict[str, str] | None = None
+    try:
+        env_path = repo_root / ".env"
+        if env_path.is_file():
+            cfg = SpirensConfig.from_env_file(str(env_path))
+            env = build_env(cfg, env_path)
+    except Exception:
+        pass
+    stack.down(volumes=volumes, env=env)
     log("down complete")

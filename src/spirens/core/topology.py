@@ -38,7 +38,9 @@ class StackRunner(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def down(self, *, volumes: bool = False) -> None: ...
+    def down(
+        self, *, volumes: bool = False, env: dict[str, str] | None = None
+    ) -> None: ...
 
 
 class SingleHostRunner(StackRunner):
@@ -67,14 +69,24 @@ class SingleHostRunner(StackRunner):
             cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
         self.runner.run(cmd, env=env)
 
-    def down(self, *, volumes: bool = False) -> None:
+    def down(
+        self, *, volumes: bool = False, env: dict[str, str] | None = None
+    ) -> None:
+        # Point --env-file at the repo-root .env so compose can interpolate
+        # required vars (REDIS_PASSWORD, ACME_EMAIL, ...) during `down` even
+        # when the process CWD isn't the compose dir. The caller ALSO passes
+        # derived vars (REDIS_URL, LIMO_HOSTNAME_SUBSTITUTION_CONFIG) via
+        # `env=` because those live only in the up-time process env, not in
+        # .env — compose's `${VAR:?}` interpolation errors out without them.
         compose_file = str(self.compose_dir / "compose.yml")
+        env_file = str(self.compose_dir.parents[1] / ".env")
+        base = ["docker", "compose", "--env-file", env_file, "-f", compose_file]
         if volumes:
             log("docker compose down --volumes (DESTRUCTIVE)")
-            self.runner.run(["docker", "compose", "-f", compose_file, "down", "--volumes"])
+            self.runner.run([*base, "down", "--volumes"], env=env)
         else:
             log("docker compose down (volumes preserved)")
-            self.runner.run(["docker", "compose", "-f", compose_file, "down"])
+            self.runner.run([*base, "down"], env=env)
 
 
 SWARM_STACK_ORDER = ["traefik", "redis", "erpc", "ipfs", "dweb-proxy"]
@@ -112,7 +124,13 @@ class SwarmRunner(StackRunner):
                 env=env,
             )
 
-    def down(self, *, volumes: bool = False) -> None:
+    def down(
+        self, *, volumes: bool = False, env: dict[str, str] | None = None
+    ) -> None:
+        # Swarm `stack rm` takes stack names, not compose files, so env-var
+        # interpolation doesn't apply here. Accept the kwarg for interface
+        # parity with SingleHostRunner.
+        del env  # unused
         log("removing spirens-* stacks")
         for stack_name in SWARM_STACK_ORDER_DOWN:
             if _swarm_stack_exists(f"spirens-{stack_name}"):
