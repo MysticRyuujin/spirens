@@ -14,6 +14,14 @@ secrets/*
 
 # Generated
 /*.log
+/site/
+
+# Python
+.venv/
+*.egg-info/
+dist/
+build/
+.direnv/
 
 # Tool caches
 .ruff_cache/
@@ -22,6 +30,9 @@ secrets/*
 __pycache__/
 node_modules/
 .pre-commit-cache/
+
+# Claude Code
+.claude/
 
 # OS / editor
 .DS_Store
