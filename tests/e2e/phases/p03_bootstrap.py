@@ -30,21 +30,8 @@ def bootstrap(ctx: Context) -> None:
     finally:
         local.unlink(missing_ok=True)
 
-    # Idempotent first-run setup: networks, secrets, acme.json perms.
+    # Idempotent first-run setup: networks, secrets, acme.json perms,
+    # plus auto-generated REDIS_PASSWORD and traefik dashboard htpasswd.
     ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens bootstrap"])
-
-    # Bootstrap warns-but-does-not-create the Traefik dashboard htpasswd.
-    # Generate one non-interactively so `up` can bind-mount it. See
-    # tests/e2e/report/findings.md for the underlying UX bug.
-    ssh_run(
-        ctx.env,
-        [
-            "bash",
-            "-lc",
-            f"cd {REMOTE_REPO} && "
-            f".venv/bin/spirens gen-htpasswd admin --password e2e-test-password",
-        ],
-    )
-
     # Second run must be a no-op (idempotency regression guard).
     ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens bootstrap"])
