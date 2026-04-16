@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -87,12 +88,4 @@ def write_htpasswd(repo_root: Path, line: str) -> None:
 
 
 def _has_command(name: str) -> bool:
-    result = subprocess.run(
-        ["command", "-v", name],
-        capture_output=True,
-        shell=True,
-    )
-    # `command -v` in a shell is more reliable; fall back to `which`.
-    if result.returncode != 0:
-        result = subprocess.run(["which", name], capture_output=True)
-    return result.returncode == 0
+    return shutil.which(name) is not None
