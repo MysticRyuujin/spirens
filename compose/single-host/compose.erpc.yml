@@ -22,12 +22,19 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:4001/metrics"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+    # NOTE: the published eRPC image is built on a distroless base with no
+    # shell, wget, or curl — any CMD-SHELL healthcheck fails with
+    # `exec "wget": not found`. A container-internal probe would need either
+    # a sidecar or a health subcommand on the `erpc-server` binary (doesn't
+    # exist today). Until upstream ships one, we rely on container-start
+    # success + Traefik's own loadbalancer probing of port 8545.
+    #
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:4001/metrics"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 15s
 
     volumes:
       - ../../config/erpc/erpc.yaml:/etc/erpc/erpc.yaml:ro

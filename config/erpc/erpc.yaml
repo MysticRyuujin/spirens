@@ -51,18 +51,24 @@ rateLimiters:
 projects:
   - id: main
 
-    # Failsafe policies applied to every upstream in this project.
-    failsafe:
-      - matchMethod: "*"
-        retry:
-          maxAttempts: 2
-          delay: 500ms
-          backoffMaxDelay: 2s
-          backoffFactor: 2
-        circuitBreaker:
-          failureThresholdCount: 20
-          failureThresholdCapacity: 100
-          halfOpenAfter: 30s
+    # Failsafe policies applied as defaults to every upstream in this
+    # project. eRPC ≥0.0.6x dropped the `project.failsafe` field; it now
+    # lives under `upstreamDefaults.failsafe` (or `networkDefaults.failsafe`).
+    # Upstreams may override individual policies by defining their own
+    # `failsafe:` block — partial overrides disable the un-defined
+    # policies, so set the full shape or inherit wholesale.
+    upstreamDefaults:
+      failsafe:
+        - matchMethod: "*"
+          retry:
+            maxAttempts: 2
+            delay: 500ms
+            backoffMaxDelay: 2s
+            backoffFactor: 2
+          circuitBreaker:
+            failureThresholdCount: 20
+            failureThresholdCapacity: 100
+            halfOpenAfter: 30s
 
     upstreams:
 
