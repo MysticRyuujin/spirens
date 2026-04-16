@@ -16,7 +16,7 @@ from spirens.core.dns import DnsProviderError, get_provider
 from spirens.core.docker import ensure_config, ensure_network, ensure_secret
 from spirens.core.env import ensure_redis_password
 from spirens.core.runner import CommandRunner
-from spirens.core.secrets import check_htpasswd, ensure_acme_json, write_dns_token
+from spirens.core.secrets import ensure_acme_json, ensure_htpasswd, write_dns_token
 from spirens.ui.console import die, log
 
 
@@ -73,7 +73,10 @@ def bootstrap(
     # 4. Secrets
     if not dry_run:
         write_dns_token(repo_root, config.dns_api_token)
-        check_htpasswd(repo_root)
+        generated, password = ensure_htpasswd(repo_root)
+        if generated:
+            log(f"generated Traefik dashboard login: admin / {password}")
+            log("  (printed once — the hash lives in secrets/traefik_dashboard_htpasswd)")
     else:
         log("secrets write skipped (dry-run)")
 

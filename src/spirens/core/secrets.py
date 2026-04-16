@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import secrets
 import shutil
+import string
 import subprocess
 from pathlib import Path
 
@@ -31,6 +33,33 @@ def check_htpasswd(repo_root: Path) -> bool:
         warn("secrets/traefik_dashboard_htpasswd is missing — run: spirens gen-htpasswd")
         return False
     return True
+
+
+def ensure_htpasswd(repo_root: Path, *, user: str = "admin") -> tuple[bool, str]:
+    """Generate traefik_dashboard_htpasswd if absent. Idempotent.
+
+    Returns ``(generated, password)``. ``password`` is meaningful only when
+    ``generated`` is True — when the secret already existed we can't recover
+    the plaintext from the hash.
+
+    Mirrors ``ensure_redis_password`` so bootstrap can produce a working
+    system without a separate manual step. Callers SHOULD print the
+    generated password exactly once; we don't do it here so the caller
+    can label it appropriately.
+    """
+    p = repo_root / "secrets" / "traefik_dashboard_htpasswd"
+    if p.exists() and p.stat().st_size > 0:
+        return (False, "")
+    password = generate_password(32)
+    line = generate_htpasswd(user, password)
+    write_htpasswd(repo_root, line)
+    return (True, password)
+
+
+def generate_password(length: int = 32) -> str:
+    """URL-safe alphanumeric — same shape as ``generate_redis_password``."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 def ensure_acme_json(repo_root: Path) -> None:
