@@ -108,10 +108,7 @@ class KuboClient:
         # map in one call. SPIRENS owns this key; any out-of-band additions
         # will be clobbered on the next ``spirens configure-ipfs`` run.
         base_domain = gateway_host.split(".", 1)[1] if "." in gateway_host else gateway_host
-        log(
-            f"registering public gateways: {gateway_host} (path) + "
-            f"{base_domain} (subdomain)"
-        )
+        log(f"registering public gateways: {gateway_host} (path) + {base_domain} (subdomain)")
         public_gateways = {
             gateway_host: {
                 "NoDNSLink": False,

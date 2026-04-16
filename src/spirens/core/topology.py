@@ -38,9 +38,7 @@ class StackRunner(ABC):
     ) -> None: ...
 
     @abstractmethod
-    def down(
-        self, *, volumes: bool = False, env: dict[str, str] | None = None
-    ) -> None: ...
+    def down(self, *, volumes: bool = False, env: dict[str, str] | None = None) -> None: ...
 
 
 class SingleHostRunner(StackRunner):
@@ -69,9 +67,7 @@ class SingleHostRunner(StackRunner):
             cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
         self.runner.run(cmd, env=env)
 
-    def down(
-        self, *, volumes: bool = False, env: dict[str, str] | None = None
-    ) -> None:
+    def down(self, *, volumes: bool = False, env: dict[str, str] | None = None) -> None:
         # Point --env-file at the repo-root .env so compose can interpolate
         # required vars (REDIS_PASSWORD, ACME_EMAIL, ...) during `down` even
         # when the process CWD isn't the compose dir. The caller ALSO passes
@@ -124,9 +120,7 @@ class SwarmRunner(StackRunner):
                 env=env,
             )
 
-    def down(
-        self, *, volumes: bool = False, env: dict[str, str] | None = None
-    ) -> None:
+    def down(self, *, volumes: bool = False, env: dict[str, str] | None = None) -> None:
         # Swarm `stack rm` takes stack names, not compose files, so env-var
         # interpolation doesn't apply here. Accept the kwarg for interface
         # parity with SingleHostRunner.

@@ -2,6 +2,15 @@
 
 Mirrors health-check.sh: exercises Traefik, eRPC, IPFS (path + subdomain),
 dweb-proxy ENS, and DoH. Non-zero exit on any failure.
+
+Profile awareness: on ``DEPLOYMENT_PROFILE=internal`` there are no public
+A records for the SPIRENS hostnames, so every check would fail on DNS
+resolution even when the stack is healthy. ``--host <ip>`` — or the
+implicit ``127.0.0.1`` default on internal — installs a
+``socket.getaddrinfo`` override that resolves the managed hostnames to
+that IP while leaving SNI and ``Host:`` headers untouched. TLS cert
+validation continues to work because lego issued real LE certs against
+the hostnames, not the IP.
 """
 
 from __future__ import annotations
@@ -9,6 +18,8 @@ from __future__ import annotations
 import json
 import socket
 import ssl
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated
@@ -41,8 +52,55 @@ class HealthReport:
     def all_passed(self) -> bool:
         return all(r.passed for r in self.results)
 
-    def to_dict(self) -> list[dict[str, str | bool]]:
+    def to_list(self) -> list[dict[str, str | bool]]:
         return [{"name": r.name, "passed": r.passed, "detail": r.detail} for r in self.results]
+
+    # Back-compat alias — callers that used the old (misleading) name keep
+    # working. Prefer ``to_list`` in new code; it honestly describes the
+    # return shape.
+    to_dict = to_list
+
+
+@contextmanager
+def _resolve_override(ip: str, hosts: set[str]) -> Iterator[None]:
+    """Temporarily override socket.getaddrinfo so ``hosts`` resolve to ``ip``.
+
+    Used on the internal deployment profile where SPIRENS hostnames have
+    no public A records but point at the VM itself. The override is
+    scoped to the ``with`` block and restored on exit (including on
+    exceptions). TLS SNI and ``Host:`` headers are built from the
+    original URL, so cert validation against the LE-issued cert works.
+    """
+    original = socket.getaddrinfo
+
+    def patched(host: str | None, *args: object, **kwargs: object) -> object:
+        if host in hosts:
+            host = ip
+        return original(host, *args, **kwargs)  # type: ignore[arg-type]
+
+    socket.getaddrinfo = patched  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = original  # type: ignore[assignment]
+
+
+def _managed_hosts(config: SpirensConfig) -> set[str]:
+    """Every hostname that points at SPIRENS / the VM."""
+    hosts = {
+        config.traefik_dashboard_host,
+        config.erpc_host,
+        config.ipfs_gateway_host,
+        config.dweb_eth_host,
+        config.dweb_resolver_host,
+    }
+    # dweb-proxy ENS check also hits vitalik.${dweb_eth_host}, and the
+    # IPFS subdomain gateway hits {cid}.${ipfs_gateway_host}. Both are
+    # subdomains of hosts already in the set; add them explicitly so the
+    # override catches them too.
+    hosts.add(f"vitalik.{config.dweb_eth_host}")
+    hosts.add(f"{HELLO_CID}.{config.ipfs_gateway_host}")
+    return {h for h in hosts if h}
 
 
 def _find_repo_root() -> Path:
@@ -183,6 +241,17 @@ def _run_checks(config: SpirensConfig, timeout: float) -> HealthReport:
 def health(
     json_output: Annotated[bool, typer.Option("--json", help="Output results as JSON.")] = False,
     timeout: Annotated[float, typer.Option("--timeout", help="Per-check timeout in seconds.")] = 15,
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            help=(
+                "Resolve SPIRENS hostnames to this IP instead of public DNS "
+                "(like curl --resolve). Defaults to 127.0.0.1 on the internal "
+                "profile; unset otherwise."
+            ),
+        ),
+    ] = "",
 ) -> None:
     """Check all public SPIRENS endpoints."""
     repo_root = _find_repo_root()
@@ -197,10 +266,19 @@ def health(
         die(f".env validation failed: {exc}")
         return
 
-    report = _run_checks(config, timeout)
+    # Default --host for internal profile: Traefik is bound to 0.0.0.0:443
+    # on the VM, so health running on the VM can hit it via loopback.
+    if not host and config.deployment_profile == "internal":
+        host = "127.0.0.1"
+
+    if host:
+        with _resolve_override(host, _managed_hosts(config)):
+            report = _run_checks(config, timeout)
+    else:
+        report = _run_checks(config, timeout)
 
     if json_output:
-        typer.echo(json.dumps(report.to_dict(), indent=2))
+        typer.echo(json.dumps(report.to_list(), indent=2))
     else:
         table = Table(title="SPIRENS Health Check", show_lines=True)
         table.add_column("Check", style="cyan", no_wrap=True)
