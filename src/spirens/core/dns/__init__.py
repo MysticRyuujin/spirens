@@ -8,6 +8,7 @@ to the lego dnsChallenge.provider value.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import StrEnum
 
 
@@ -18,6 +19,15 @@ class ProviderName(StrEnum):
 
 class DnsProviderError(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class TxtRecord:
+    """Minimal shape covered by every provider's list-records endpoint."""
+
+    id: str
+    name: str
+    content: str
 
 
 class DnsProvider(ABC):
@@ -60,6 +70,24 @@ class DnsProvider(ABC):
     def env_vars(self) -> dict[str, str]:
         """Extra env vars to write to .env (beyond DNS_PROVIDER)."""
         ...
+
+    def list_txt_records(self, zone: str, *, name_prefix: str = "") -> list[TxtRecord]:
+        """List TXT records on ``zone``. Optional ``name_prefix`` filter.
+
+        Used by ``spirens cleanup-acme-txt`` to find orphan ACME challenge
+        records that lego occasionally leaves behind. Default raises so
+        providers that don't implement it fail loud rather than
+        silent-noop on cleanup.
+        """
+        raise NotImplementedError(
+            f"{self.display_name} provider doesn't implement list_txt_records yet"
+        )
+
+    def delete_record(self, zone: str, record_id: str) -> None:
+        """Delete the record with ``record_id`` from ``zone``."""
+        raise NotImplementedError(
+            f"{self.display_name} provider doesn't implement delete_record yet"
+        )
 
     def close(self) -> None:
         """Release resources. Subclasses with HTTP clients should override."""

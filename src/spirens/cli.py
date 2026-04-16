@@ -6,6 +6,7 @@ import typer
 
 from spirens import __version__
 from spirens.commands import bootstrap as _bootstrap
+from spirens.commands import cleanup_acme as _cleanup_acme
 from spirens.commands import configure_ipfs as _configure_ipfs
 from spirens.commands import doctor as _doctor
 from spirens.commands import down as _down
@@ -55,3 +56,4 @@ app.command()(_bootstrap.bootstrap)
 app.command("configure-ipfs")(_configure_ipfs.configure_ipfs)
 app.command("gen-htpasswd")(_gen_htpasswd.gen_htpasswd)
 app.command("encode-hostname-map")(_encode_hostname_map.encode_hostname_map)
+app.command("cleanup-acme-txt")(_cleanup_acme.cleanup_acme_txt)
