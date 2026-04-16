@@ -142,7 +142,7 @@ ETH_LOCAL_URL=http://192.168.1.50:8545
 Make sure the node's `--http.vhosts` / `--http.addr` allows the Docker
 bridge subnet. On Geth:
 
-```
+```text
 --http.addr=0.0.0.0 --http.vhosts=*
 ```
 

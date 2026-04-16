@@ -31,6 +31,13 @@ services:
         published: 5001
         protocol: tcp
         mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:5001/api/v0/id"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
     volumes:
       - ipfs_data:/data/ipfs
     networks:

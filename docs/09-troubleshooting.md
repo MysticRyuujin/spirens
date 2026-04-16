@@ -6,7 +6,7 @@ organized by symptom. Each entry: **what you see** → **why** → **how to fix*
 ## Start here — sanity sweep
 
 ```bash
-./scripts/health-check.sh
+spirens health
 ```
 
 Failing checks are labeled by endpoint. Skip to the matching section below.
@@ -31,7 +31,7 @@ broader permissions.
 
 ```bash
 sudo chmod 600 letsencrypt/acme.json
-# or: re-run scripts/bootstrap.sh which fixes this idempotently
+# or: re-run spirens bootstrap which fixes this idempotently
 ```
 
 ### `Provider.Cloudflare: forbidden`
@@ -119,7 +119,7 @@ container was recreated.
 **Fix.**
 
 ```bash
-./scripts/configure-ipfs.sh
+spirens configure-ipfs
 ```
 
 This is idempotent. If it still fails, verify dweb-proxy is up and
@@ -183,7 +183,7 @@ upstream — only Ethereum mainnet is enabled by default.
 
 **Fix.** Uncomment a vendor block for chainId 8453 in
 [`config/erpc/erpc.yaml`](../config/erpc/erpc.yaml) and set the matching
-API key. Restart: `./scripts/up.sh single erpc`.
+API key. Restart: `spirens up single -s erpc`.
 
 ---
 
@@ -217,7 +217,7 @@ post-deploy).
 **Fix.**
 
 ```bash
-./scripts/configure-ipfs.sh
+spirens configure-ipfs
 ```
 
 Verify:
@@ -239,6 +239,7 @@ host`.
 - Add the record manually per the table in
   [`02-dns-and-cloudflare.md#required-records`](02-dns-and-cloudflare.md#required-records).
 - Or include the `dns-sync` module and run it once:
+
   ```bash
   docker compose -f compose/single-host/optional/compose.dns-sync.yml run --rm dns-sync
   ```
@@ -250,10 +251,10 @@ host`.
 ### `template: …: map has no entry for key "DWEB_ETH_HOST"`
 
 **Why.** You ran `docker compose up` directly without sourcing `.env`
-first. `./scripts/up.sh` sources it; running compose commands by hand
+first. `spirens up` sources it; running compose commands by hand
 doesn't.
 
-**Fix.** Either use the wrapper (`./scripts/up.sh single …`) or
+**Fix.** Either use the wrapper (`spirens up single …`) or
 source the env manually:
 
 ```bash
@@ -265,12 +266,12 @@ docker compose -f compose/single-host/compose.yml up -d
 
 **Why.** The base64 blob wasn't exported before the compose command ran.
 
-**Fix.** Always use `./scripts/up.sh` — it runs
-`scripts/encode-hostname-map.sh` first and exports the result. For
+**Fix.** Always use `spirens up` — it runs
+`spirens encode-hostname-map` first and exports the result. For
 manual:
 
 ```bash
-eval "$(./scripts/encode-hostname-map.sh --export)"
+eval "$(spirens encode-hostname-map --export)"
 docker compose -f compose/single-host/compose.yml up -d
 ```
 
@@ -318,7 +319,7 @@ dig +short rpc.$BASE_DOMAIN
 
 If none of the above matches — open an issue with:
 
-- The output of `./scripts/health-check.sh`
+- The output of `spirens health`
 - `docker compose logs --tail=200` for the failing service
 - Your `.env` **with secrets redacted** (domain, CF email, IP ranges only)
 

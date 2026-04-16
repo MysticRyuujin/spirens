@@ -22,7 +22,7 @@ Two external bridge networks keep the attack surface small:
 - `spirens_backend` — internal-only; services that need to reach each other (eRPC ↔ Redis, dweb-proxy ↔ eRPC ↔ Kubo API)
 
 Traefik sits on both; every other service sits only on the one(s) it needs. The
-networks are created once by `scripts/bootstrap.sh` and are `external: true` in
+networks are created once by `spirens bootstrap` and are `external: true` in
 every compose file so individual modules can be added/removed without
 disturbing the network.
 
@@ -30,7 +30,7 @@ disturbing the network.
 
 ### 1. JSON-RPC request
 
-```
+```text
 client ──HTTPS──▶ rpc.example.com
                   └▶ Traefik (cert terminate)
                      └▶ eRPC :8545
@@ -42,7 +42,7 @@ client ──HTTPS──▶ rpc.example.com
 
 ### 2. IPFS gateway (path-style)
 
-```
+```text
 client ──HTTPS──▶ ipfs.example.com/ipfs/{cid}
                   └▶ Traefik
                      └▶ Kubo gateway :8080
@@ -50,7 +50,7 @@ client ──HTTPS──▶ ipfs.example.com/ipfs/{cid}
 
 ### 3. IPFS gateway (subdomain-style, same-origin isolation)
 
-```
+```text
 client ──HTTPS──▶ {cid}.ipfs.example.com
                   └▶ Traefik   (wildcard cert *.ipfs.example.com)
                      └▶ Kubo gateway :8080  (UseSubdomains: true)
@@ -58,7 +58,7 @@ client ──HTTPS──▶ {cid}.ipfs.example.com
 
 ### 4. ENS browse (`vitalik.eth.example.com`)
 
-```
+```text
 client ──HTTPS──▶ vitalik.eth.example.com
                   └▶ Traefik   (wildcard cert *.eth.example.com)
                      └▶ dweb-proxy :8080
@@ -69,7 +69,7 @@ client follows ─┘                              └─ (flow #3)
 
 ### 5. Kubo's own `.eth` DNSLink resolution
 
-```
+```text
 Kubo ──DoH──▶ ens-resolver.example.com/dns-query
               └▶ Traefik
                  └▶ dweb-proxy :11000
@@ -93,7 +93,7 @@ topologies. The wiring differs in exactly these ways:
 
 Pick **single-host** for getting started, a single VPS, or learning. Pick
 **swarm** when you have multiple hosts, want HA routing across managers, or
-need NFS-backed state for Traefik's ACME storage. `./scripts/up.sh` supports
+need NFS-backed state for Traefik's ACME storage. `spirens up` supports
 both via the first positional argument.
 
 ## Where to next

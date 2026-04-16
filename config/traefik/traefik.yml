@@ -7,7 +7,7 @@
 #
 #  What lives where:
 #    - entrypoints         : port definitions + HTTP→HTTPS redirect
-#    - certificatesResolvers : Let's Encrypt via Cloudflare DNS-01
+#    - certificatesResolvers : Let's Encrypt via DNS-01 (provider set in .env)
 #    - providers           : where Traefik discovers services (Docker labels + this file's sibling dynamic.yml)
 #    - forwardedHeaders    : which IPs we trust to set X-Forwarded-For (Cloudflare + RFC1918)
 #
@@ -70,10 +70,10 @@ entryPoints:
 certificatesResolvers:
   le:
     acme:
-      # email + storage injected via command-line args in the compose file so
-      # this static file can stay environment-agnostic. See traefik.yml compose.
+      # email, storage, and provider are injected via command-line args in the
+      # compose file so this static file stays environment-agnostic.
       dnsChallenge:
-        provider: cloudflare
+        provider: cloudflare  # overridden by compose → ${DNS_PROVIDER}
         delayBeforeCheck: 10s
         resolvers:
           - "1.1.1.1:53"

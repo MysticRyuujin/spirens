@@ -2,12 +2,12 @@
 #  Traefik — single-host topology
 # =============================================================================
 #  Reverse proxy + TLS termination. Discovers other services via Docker
-#  labels. Fetches Let's Encrypt certificates via Cloudflare DNS-01 (works
-#  with or without CF proxy mode, supports wildcards).
+#  labels. Fetches Let's Encrypt certificates via DNS-01 challenge (supports
+#  Cloudflare, DigitalOcean, and 170+ other providers via lego).
 #
 #  Included by ./compose.yml. If you run Traefik stand-alone for testing,
 #  `docker compose -f compose.traefik.yml up` works too, but the networks
-#  must already exist (scripts/bootstrap.sh creates them).
+#  must already exist (spirens bootstrap creates them).
 # =============================================================================
 ---
 services:
@@ -26,7 +26,7 @@ services:
       - --certificatesResolvers.le.acme.email=${ACME_EMAIL}
       - --certificatesResolvers.le.acme.storage=/letsencrypt/acme.json
       - --certificatesResolvers.le.acme.dnsChallenge=true
-      - --certificatesResolvers.le.acme.dnsChallenge.provider=cloudflare
+      - --certificatesResolvers.le.acme.dnsChallenge.provider=${DNS_PROVIDER:-cloudflare}
 
     ports:
       - "80:80"
@@ -41,13 +41,18 @@ services:
       - letsencrypt:/letsencrypt
 
     environment:
-      CF_API_EMAIL: "${CF_API_EMAIL}"
-      # The Cloudflare DNS-01 provider reads CF_DNS_API_TOKEN from a file so
-      # the token never appears in env vars or `docker inspect`.
-      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+      # DNS provider credentials — lego only reads the env vars for the
+      # active provider (set by DNS_PROVIDER). Unused vars are harmless.
+      # All _FILE variants read the token from the mounted secret.
+      #
+      # Cloudflare
+      CF_API_EMAIL: "${CF_API_EMAIL:-}"
+      CF_DNS_API_TOKEN_FILE: /run/secrets/dns_api_token
+      # DigitalOcean
+      DO_AUTH_TOKEN_FILE: /run/secrets/dns_api_token
 
     secrets:
-      - cf_api_token
+      - dns_api_token
       - traefik_dashboard_htpasswd
 
     networks:
@@ -70,8 +75,8 @@ services:
       - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
 secrets:
-  cf_api_token:
-    file: ../../secrets/cf_api_token
+  dns_api_token:
+    file: ../../secrets/dns_api_token
   traefik_dashboard_htpasswd:
     file: ../../secrets/traefik_dashboard_htpasswd
 

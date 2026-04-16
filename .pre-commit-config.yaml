@@ -1,13 +1,12 @@
 # =============================================================================
 #  SPIRENS — pre-commit
 # =============================================================================
-#  Install once:
-#     pipx install pre-commit     (or: brew install pre-commit, pip install --user pre-commit)
-#     pre-commit install          (installs .git/hooks/pre-commit)
+#  With direnv: hooks install automatically on first `cd` into the repo.
+#  Without direnv:
+#     uv tool install pre-commit  (or: pipx / brew install pre-commit)
+#     pre-commit install
 #
-#  Run on all files any time:
-#     pre-commit run --all-files
-#
+#  Run on all files: pre-commit run --all-files
 #  CI runs the same set via .github/workflows/lint.yml.
 # =============================================================================
 ---
@@ -19,11 +18,10 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: \.md$  # markdown trailing spaces can be meaningful
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents]
-        exclude: ^(config/erpc/|compose/).*\.ya?ml$ # interpolation breaks the parser
+        exclude: ^mkdocs\.yml$  # uses !!python/name: tag that requires unsafe load
       - id: check-json
       - id: check-merge-conflict
       - id: check-executables-have-shebangs
@@ -49,18 +47,6 @@ repos:
       - id: markdownlint-cli2
         args: [--config, .markdownlint.json]
 
-  # ─── Shell: shellcheck + shfmt ─────────────────────────────────────────────
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
-    hooks:
-      - id: shellcheck
-
-  - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.13.1-1
-    hooks:
-      - id: shfmt
-        args: [-i, "4", -ci, -sr, -w]
-
   # ─── Prettier (JSON, MD, YAML where safe) ──────────────────────────────────
   - repo: https://github.com/rbubley/mirrors-prettier
     rev: v3.8.3
@@ -70,10 +56,26 @@ repos:
         # YAML intentionally omitted — prettier's YAML formatter rewrites
         # comments we rely on for the educational docs.
 
-  # ─── Ruff (Python lint + format) ───────────────────────────────────────────
+  # ─── Ruff (Python lint + format — replaces black + isort + flake8) ────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.10
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  # ─── Mypy (static type checking) ──────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        args: [--config-file=pyproject.toml]
+        additional_dependencies:
+          - typer>=0.24
+          - pydantic>=2.13
+          - httpx>=0.28
+          - python-dotenv>=1.2
+          - pyyaml>=6.0.3
+          - types-PyYAML
+        pass_filenames: false
+        entry: mypy src/spirens/

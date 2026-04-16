@@ -1,0 +1,86 @@
+site_name: SPIRENS
+site_description: Sovereign Portal for IPFS Resolution via Ethereum Naming Services
+site_url: https://mysticryuujin.github.io/spirens/
+repo_url: https://github.com/MysticRyuujin/spirens
+repo_name: MysticRyuujin/spirens
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Architecture: 00-overview.md
+      - Prerequisites: 01-prerequisites.md
+      - DNS & Cloudflare: 02-dns-and-cloudflare.md
+      - Certificates: 03-certificates.md
+  - Services:
+      - Traefik: 04-traefik.md
+      - Ethereum Node: 05-ethereum-node.md
+      - eRPC: 06-erpc.md
+      - IPFS (Kubo): 07-ipfs.md
+      - dweb-proxy: 08-dweb-proxy.md
+  - CLI Reference: cli.md
+  - Troubleshooting: 09-troubleshooting.md
+
+validation:
+  links:
+    # Docs link to repo files (../config/*, ../compose/*) that mkdocs can't
+    # resolve. These links work on GitHub; suppress the warnings here.
+    absolute_links: ignore
+    unrecognized_links: ignore
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.mark
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/MysticRyuujin/spirens

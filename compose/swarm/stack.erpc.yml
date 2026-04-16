@@ -4,7 +4,7 @@
 #  In swarm, we ship erpc.yaml as a Docker config instead of a bind mount so
 #  it's available on any node the service lands on.
 #
-#  Bootstrap (or ./scripts/bootstrap.sh --swarm) must create:
+#  Bootstrap (or spirens bootstrap --swarm) must create:
 #      docker config create spirens_erpc_yaml config/erpc/erpc.yaml
 # =============================================================================
 ---
@@ -26,6 +26,13 @@ services:
       QUICKNODE_API_KEY:  "${QUICKNODE_API_KEY:-}"
       INFURA_API_KEY:     "${INFURA_API_KEY:-}"
       REDIS_PASSWORD:     "${REDIS_PASSWORD:-}"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:4001/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
     networks:
       - frontend

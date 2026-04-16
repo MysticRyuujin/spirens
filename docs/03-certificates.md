@@ -101,20 +101,25 @@ Use this if:
 3. Download both the certificate (PEM) and the private key. CF only shows the
    key _once_ — save it somewhere secure.
 4. Place them in `secrets/`:
-   ```
+
+   ```text
    secrets/cf_origin.crt
    secrets/cf_origin.key
    ```
+
 5. Add a Traefik dynamic file referencing them. Create
    `config/traefik/dynamic-certs.yml`:
+
    ```yaml
    tls:
      certificates:
        - certFile: /run/secrets/cf_origin_crt
          keyFile: /run/secrets/cf_origin_key
    ```
+
 6. Update `compose/single-host/compose.traefik.yml` to mount this file and the
    two secrets:
+
    ```yaml
    secrets:
      - cf_origin_crt
@@ -124,6 +129,7 @@ Use this if:
    volumes:
      - ../../config/traefik/dynamic-certs.yml:/etc/traefik/dynamic-certs.yml:ro
    ```
+
    Add a second `--providers.file.directory=/etc/traefik` or leave
    `providers.file.filename` pointing at `dynamic.yml` and add a second file
    entry. Traefik picks up both.

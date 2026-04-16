@@ -29,7 +29,7 @@ an HTTP service.
 
 ## The full flow (ENS browse)
 
-```
+```text
 client
   │
   │  GET https://vitalik.eth.example.com/
@@ -57,7 +57,7 @@ Kubo gateway :8080  (UseSubdomains=true → serves the CID's root document)
 
 ## The DoH flow (Kubo's `.eth` resolution)
 
-```
+```text
 Kubo           (config: DNS.Resolvers["eth."] = "https://ens-resolver.example.com/dns-query")
   │
   │  DNS-over-HTTPS TXT query for _dnslink.vitalik.eth
@@ -97,9 +97,9 @@ Source of truth:
 }
 ```
 
-At run-time, [`scripts/encode-hostname-map.sh`](../scripts/encode-hostname-map.sh)
+At run-time, `spirens encode-hostname-map`
 substitutes the `${DWEB_ETH_HOST}` placeholder from `.env` and base64-encodes
-the result. `scripts/up.sh` calls it automatically before bringing services up.
+the result. `spirens up` calls it automatically before bringing services up.
 
 If you want to add another TLD:
 
@@ -139,12 +139,12 @@ SPIRENS handles this for you:
 
 - `compose/single-host/compose.redis.yml` ships as a core module (included
   automatically, not in `optional/`).
-- `scripts/bootstrap.sh` generates a random 48-char `REDIS_PASSWORD` on
+- `spirens bootstrap` generates a random 48-char `REDIS_PASSWORD` on
   first run if `.env` doesn't already have one, and writes it back.
-- `scripts/up.sh` derives `REDIS_URL` from `REDIS_PASSWORD` and exports it
+- `spirens up` derives `REDIS_URL` from `REDIS_PASSWORD` and exports it
   so dweb-proxy picks it up.
 
 To rotate the password: blank `REDIS_PASSWORD=` in `.env`, re-run
-`./scripts/bootstrap.sh`, then `./scripts/up.sh single redis dweb-proxy`.
+`spirens bootstrap`, then `spirens up single -s redis -s dweb-proxy`.
 
 Continue → [09 — Troubleshooting](09-troubleshooting.md)

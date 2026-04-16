@@ -18,14 +18,15 @@ http:
     # ─────── Dashboard protection ───────
     #
     # Basic-auth using a bcrypt hash mounted as a Docker secret (not inlined
-    # in a label — see ./scripts/gen-htpasswd.sh). The path below is where
+    # in a label — see `spirens gen-htpasswd`). The path below is where
     # compose/*/compose.traefik.yml mounts the secret inside the container.
     dashboard-auth:
       basicAuth:
         usersFile: /run/secrets/traefik_dashboard_htpasswd
 
-    # Restrict the dashboard to known-good networks. Comma-separated list
-    # comes from ${TRUSTED_CIDRS} in .env (defaults to RFC1918).
+    # Restrict the dashboard to known-good networks (RFC1918 by default).
+    # Note: Traefik's dynamic config does NOT interpolate env vars — edit
+    # the sourceRange list below directly to change the allowed CIDRs.
     # Traefik v3 syntax: `ipAllowList.sourceRange`. (Older v2 used `ipWhiteList`.)
     dashboard-ipallow:
       ipAllowList:
@@ -51,7 +52,7 @@ http:
         referrerPolicy: "no-referrer-when-downgrade"
         customResponseHeaders:
           X-XSS-Protection: "1; mode=block"
-          Cross-Origin-Resource-Policy: "same-site"
+          Cross-Origin-Resource-Policy: "cross-origin"
 
     # ─────── CORS for Web3 endpoints ───────
     #

@@ -6,7 +6,7 @@
 #    - :5001 — API (write-access; bound to 127.0.0.1 ONLY; never exposed)
 #
 #  Post-deploy config (CORS, custom gateway domain, .eth DNS resolver) is
-#  applied by scripts/configure-ipfs.sh, which ./scripts/up.sh runs
+#  applied by spirens configure-ipfs, which spirens up runs
 #  automatically on first boot.
 #
 #  IPFS_PROFILE=server,pebbleds:
@@ -32,6 +32,13 @@ services:
       - "127.0.0.1:5001:5001"
       # Gateway (8080) stays INTERNAL — Traefik reaches it via the bridge
       # network, not via a host port. No port binding here.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:5001/api/v0/id"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
     volumes:
       - ipfs_data:/data/ipfs
     networks:

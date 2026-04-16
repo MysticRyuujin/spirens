@@ -27,7 +27,7 @@ services:
     security_opt: [no-new-privileges:true]
     environment:
       CLOUDFLARE_API_TOKEN: "${CF_DNS_API_TOKEN}"
-      # DDNS_DOMAINS is built by scripts/up.sh from DDNS_RECORDS × BASE_DOMAIN
+      # DDNS_DOMAINS is built by spirens up from DDNS_RECORDS × BASE_DOMAIN
       # (Compose's ${…} interpolation doesn't do bash-style substring replacement,
       # so we do it in the wrapper script).
       DOMAINS: "${DDNS_DOMAINS}"

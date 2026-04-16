@@ -5,7 +5,7 @@
 services:
   dweb-proxy:
     # In Swarm, `depends_on` is ignored at the stack level — deploy the
-    # `spirens-redis` stack BEFORE `spirens-dweb-proxy`. ./scripts/up.sh
+    # `spirens-redis` stack BEFORE `spirens-dweb-proxy`. spirens up
     # orders them automatically.
     image: ghcr.io/ethlimo/dweb-proxy-api:main
     environment:

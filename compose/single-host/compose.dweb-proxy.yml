@@ -8,10 +8,10 @@
 #
 #  Requires LIMO_HOSTNAME_SUBSTITUTION_CONFIG — a base64-encoded mapping of
 #  your eth-gateway hostname to the TLD to resolve. Source of truth lives
-#  in config/dweb-proxy/hostname-map.json; scripts/encode-hostname-map.sh
+#  in config/dweb-proxy/hostname-map.json; spirens encode-hostname-map
 #  turns that into the base64 blob this container wants.
 #
-#  The scripts/up.sh wrapper sets LIMO_HOSTNAME_SUBSTITUTION_CONFIG in the
+#  The spirens up wrapper sets LIMO_HOSTNAME_SUBSTITUTION_CONFIG in the
 #  environment before `docker compose up` — you rarely invoke that script
 #  by hand.
 # =============================================================================
@@ -38,13 +38,13 @@ services:
       # base64 JSON mapping, e.g. {"eth.example.com":"eth"}
       LIMO_HOSTNAME_SUBSTITUTION_CONFIG: "${LIMO_HOSTNAME_SUBSTITUTION_CONFIG}"
 
-      # DNS-over-HTTPS for Kubo's DNS.Resolvers (see scripts/configure-ipfs.sh)
+      # DNS-over-HTTPS for Kubo's DNS.Resolvers (see spirens configure-ipfs)
       DNSQUERY_ENABLED: "true"
       DNSQUERY_LISTEN_PORT: "11000"
 
       # Redis is REQUIRED by dweb-proxy (caches resolved ENS records + rate
       # limits — see upstream README). Fails loudly if the var is missing.
-      REDIS_URL: "${REDIS_URL:?REDIS_URL unset — did scripts/up.sh derive it from REDIS_PASSWORD?}"
+      REDIS_URL: "${REDIS_URL:?REDIS_URL unset — did spirens up derive it from REDIS_PASSWORD?}"
       CACHE_TTL: "300"
 
       LOG_LEVEL: "info"

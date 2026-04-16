@@ -97,10 +97,13 @@ auto-detect that — you need something updating the A records.
 **Simplest path: `favonia/cloudflare-ddns`**, shipped as an opt-in module.
 
 1. List the records that should track your IP in `.env`:
+
    ```ini
    DDNS_RECORDS=rpc,ipfs,*.ipfs,eth,*.eth,ens-resolver,traefik
    ```
+
 2. Include the module in `compose/single-host/compose.yml`:
+
    ```yaml
    include:
      - compose.traefik.yml
@@ -109,7 +112,8 @@ auto-detect that — you need something updating the A records.
      - compose.dweb-proxy.yml
      - optional/compose.ddns.yml
    ```
-3. `./scripts/up.sh single` — the DDNS container runs on a 5-minute loop and
+
+3. `spirens up single` — the DDNS container runs on a 5-minute loop and
    pokes Cloudflare whenever your public IP changes.
 
 **Alternatives:** many consumer routers (OPNsense, pfSense, OpenWRT,
@@ -166,7 +170,7 @@ add one wildcard per zone, e.g.
 
 **dnsmasq:**
 
-```
+```text
 address=/eth.example.com/192.168.1.10
 address=/ipfs.example.com/192.168.1.10
 ```

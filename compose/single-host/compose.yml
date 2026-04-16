@@ -5,7 +5,7 @@
 #  Compose v2's `include:` directive to pull in one file per service.
 #
 #  Core 4 are enabled by default. Opt-in modules are commented out — uncomment
-#  the lines you want active, re-run `./scripts/up.sh single`.
+#  the lines you want active, re-run `spirens up single`.
 # =============================================================================
 ---
 include:

@@ -1,13 +1,52 @@
-#
-# SPIRENS — Python tooling
-# =====================================================================
-# We ship exactly one Python file (compose/single-host/optional/dns-sync/sync.py);
-# this exists to give ruff/black/etc. a consistent config if you run them.
-#
+# =============================================================================
+#  SPIRENS — project configuration
+# =============================================================================
+
+[build-system]
+requires = ["hatchling>=1.29"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spirens"
+version = "0.1.0"
+description = "CLI for SPIRENS — Sovereign Portal for IPFS Resolution via Ethereum Naming Services"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.14"
+dependencies = [
+  "typer>=0.24",
+  "rich>=15.0",
+  "InquirerPy>=0.3.4",
+  "pydantic>=2.13",
+  "python-dotenv>=1.2",
+  "httpx>=0.28",
+  "pyyaml>=6.0.3",
+]
+
+[project.scripts]
+spirens = "spirens.cli:app"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=9.0",
+  "pytest-cov>=7.1",
+  "mypy>=1.20",
+]
+
+docs = [
+  "mkdocs-material>=9.6",
+  "pymdown-extensions>=10.14",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spirens"]
+
+# ─── Ruff ────────────────────────────────────────────────────────────────────
 
 [tool.ruff]
 target-version = "py314"
 line-length = 100
+src = ["src"]
 extend-exclude = [
   ".venv",
   "letsencrypt",
@@ -24,11 +63,23 @@ select = [
   "UP",  # pyupgrade
   "SIM", # simplifications
 ]
-ignore = [
-  "E501", # line length — handled by formatter
-]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+# ─── Mypy ────────────────────────────────────────────────────────────────────
+
+[tool.mypy]
+python_version = "3.14"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+# ─── Pytest ──────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -9,7 +9,7 @@
 #  then adjust the image: line below.
 #
 #  records.yaml is shipped as a Docker config so any node can run the service.
-#  Prerequisite (or let scripts/bootstrap.sh --swarm do it):
+#  Prerequisite (or let spirens bootstrap --swarm do it):
 #      docker config create spirens_dns_records config/dns/records.yaml
 # =============================================================================
 ---
@@ -20,7 +20,7 @@ services:
       BASE_DOMAIN: "${BASE_DOMAIN}"
       CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
       PUBLIC_IP: "${PUBLIC_IP:-auto}"
-      DNS_SYNC_INTERVAL: "${DNS_SYNC_INTERVAL:-1h}"
+      DNS_SYNC_INTERVAL: "${DNS_SYNC_INTERVAL:-one-shot}"
       RECORDS_FILE: /records.yaml
     configs:
       - source: spirens_dns_records

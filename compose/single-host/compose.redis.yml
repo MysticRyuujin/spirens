@@ -6,7 +6,7 @@
 #  Also used opportunistically by eRPC when the Redis connector is
 #  uncommented in config/erpc/erpc.yaml.
 #
-#  Password comes from ${REDIS_PASSWORD} in .env — scripts/bootstrap.sh
+#  Password comes from ${REDIS_PASSWORD} in .env — spirens bootstrap
 #  generates a random one if the var is empty on first run.
 # =============================================================================
 ---

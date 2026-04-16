@@ -76,14 +76,14 @@ you're set.
 
 ## The mental model
 
-SPIRENS ships two topologies from the same `config/` and `scripts/`:
+SPIRENS ships two topologies from the same `config/`:
 
 | If you have…                                   | Use             |
 | ---------------------------------------------- | --------------- |
 | One host, first time self-hosting Web3 infra   | **single-host** |
 | Multiple hosts, want HA ingress + shared state | **swarm**       |
 
-`./scripts/up.sh single` vs `./scripts/up.sh swarm` is the switch. Pick one;
+`spirens up single` vs `spirens up swarm` is the switch. Pick one;
 you can change your mind later.
 
 Continue → [02 — DNS & Cloudflare](02-dns-and-cloudflare.md)

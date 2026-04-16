@@ -99,7 +99,7 @@ $EDITOR compose/single-host/compose.yml
 #   uncomment the  '- optional/compose.ethereum.yml'  line
 
 # Bring the node up (this will start downloading a lot; budget days):
-./scripts/up.sh single ethereum-el ethereum-cl
+spirens up single -s ethereum-el -s ethereum-cl
 ```
 
 The reference compose:
@@ -123,7 +123,7 @@ ETH_LOCAL_URL=http://host.docker.internal:8545
 Restart eRPC:
 
 ```bash
-./scripts/up.sh single erpc
+spirens up single -s erpc
 ```
 
 Verify:

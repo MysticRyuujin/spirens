@@ -12,12 +12,12 @@
 #  Prerequisites:
 #    docker network create --driver overlay --attachable spirens_frontend
 #    docker network create --driver overlay --attachable spirens_backend
-#    echo -n "$CF_DNS_API_TOKEN" | docker secret create cf_api_token -
+#    echo -n "$TOKEN" | docker secret create dns_api_token -
 #    docker secret create traefik_dashboard_htpasswd ../../secrets/traefik_dashboard_htpasswd
 #    docker config create spirens_traefik_yml      ../../config/traefik/traefik.yml
 #    docker config create spirens_traefik_dynamic  ../../config/traefik/dynamic.yml
 #
-#  (./scripts/bootstrap.sh --swarm does all of the above idempotently.)
+#  (spirens bootstrap --swarm does all of the above idempotently.)
 # =============================================================================
 ---
 services:
@@ -31,7 +31,7 @@ services:
       - --certificatesResolvers.le.acme.email=${ACME_EMAIL}
       - --certificatesResolvers.le.acme.storage=/letsencrypt/acme.json
       - --certificatesResolvers.le.acme.dnsChallenge=true
-      - --certificatesResolvers.le.acme.dnsChallenge.provider=cloudflare
+      - --certificatesResolvers.le.acme.dnsChallenge.provider=${DNS_PROVIDER:-cloudflare}
 
     ports:
       - target: 80
@@ -46,8 +46,10 @@ services:
       - letsencrypt:/letsencrypt
 
     environment:
-      CF_API_EMAIL: "${CF_API_EMAIL}"
-      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+      # DNS provider credentials — lego only reads the active provider's vars.
+      CF_API_EMAIL: "${CF_API_EMAIL:-}"
+      CF_DNS_API_TOKEN_FILE: /run/secrets/dns_api_token
+      DO_AUTH_TOKEN_FILE: /run/secrets/dns_api_token
 
     configs:
       - source: spirens_traefik_yml
@@ -56,7 +58,7 @@ services:
         target: /etc/traefik/dynamic.yml
 
     secrets:
-      - cf_api_token
+      - dns_api_token
       - traefik_dashboard_htpasswd
 
     networks:
@@ -88,7 +90,7 @@ configs:
     external: true
 
 secrets:
-  cf_api_token:
+  dns_api_token:
     external: true
   traefik_dashboard_htpasswd:
     external: true

@@ -37,19 +37,24 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-      - name: Install shfmt (needed by the shfmt hook)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shfmt
-      - name: Install pre-commit
-        run: python -m pip install --upgrade pre-commit
-      - name: Cache pre-commit hook environments
-        uses: actions/cache@v5
+      - uses: pre-commit/action@v3.0.1
+
+  # ─── Python tests ──────────────────────────────────────────────────────────
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ env.pythonLocation }}-${{ hashFiles('.pre-commit-config.yaml') }}
-      - name: Run pre-commit
-        run: pre-commit run --all-files --show-diff-on-failure --color=always
+          python-version: "3.14"
+          cache: pip
+      - name: Install package with dev deps
+        run: pip install -e ".[dev]"
+      - name: Run tests
+        run: python -m pytest tests/ -v
+      - name: Type check
+        run: mypy src/spirens/
 
   # ─── Compose validation (single-host + swarm) ──────────────────────────────
   compose-validate:
@@ -63,6 +68,7 @@ jobs:
           cat > /tmp/spirens.env <<'EOF'
           BASE_DOMAIN=example.com
           ACME_EMAIL=admin@example.com
+          DNS_PROVIDER=cloudflare
           CF_API_EMAIL=you@example.com
           CF_DNS_API_TOKEN=dummy-token
           TRAEFIK_DASHBOARD_HOST=traefik.example.com
@@ -81,7 +87,7 @@ jobs:
           EOF
 
       - name: Seed placeholder secret files
-        run: mkdir -p secrets && touch secrets/cf_api_token secrets/traefik_dashboard_htpasswd
+        run: mkdir -p secrets && touch secrets/dns_api_token secrets/traefik_dashboard_htpasswd
 
       - name: Validate single-host aggregate
         # Entry point that `include:`s every core module. Validates the

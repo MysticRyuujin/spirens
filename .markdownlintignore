@@ -3,4 +3,5 @@ node_modules/
 letsencrypt/
 secrets/
 data/
+site/
 LICENSE

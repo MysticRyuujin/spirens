@@ -1,6 +1,6 @@
 # SPIRENS
 
-**Sovereign Portal for IPFS Resolution via Ethereum Naming Services**
+Sovereign Portal for IPFS Resolution via Ethereum Naming Services
 
 A turnkey, modular, educational reference for self-hosting a private Web3 infrastructure
 stack. Clone it, point a domain at Cloudflare, fill in a `.env`, and bring up:
@@ -63,23 +63,47 @@ version.
 2. **Create DNS records** per [`docs/02-dns-and-cloudflare.md`](docs/02-dns-and-cloudflare.md)
    (or use the opt-in `dns-sync` module to do it via API).
 3. **Clone & configure:**
+
    ```bash
    git clone https://github.com/MysticRyuujin/spirens && cd spirens
-   cp .env.example .env        # fill in BASE_DOMAIN, ACME_EMAIL, CF_DNS_API_TOKEN
-   ./scripts/gen-htpasswd.sh   # creates secrets/traefik_dashboard_htpasswd
+   pip install .                 # install the spirens CLI
+   spirens setup                 # interactive wizard creates .env + secrets
    ```
+
 4. **Bring it up:**
+
    ```bash
-   ./scripts/up.sh single      # plain Docker Compose
+   spirens up single             # plain Docker Compose
    # -- or --
-   ./scripts/up.sh swarm       # Docker Swarm (multi-host ready)
+   spirens up swarm              # Docker Swarm (multi-host ready)
    ```
+
 5. **Verify:**
+
    ```bash
-   ./scripts/health-check.sh
+   spirens health
    ```
+
 6. **Read the docs in order** (`docs/00-overview.md` → `docs/09-troubleshooting.md`)
-   whenever you want to understand _why_ a config is shaped a certain way.
+   whenever you want to understand *why* a config is shaped a certain way.
+
+---
+
+## CLI reference
+
+```bash
+spirens setup                # interactive .env + secrets wizard
+spirens up single|swarm      # bring the stack up
+spirens down single|swarm    # tear it down (--volumes for destructive)
+spirens health               # check all public endpoints (--json for CI)
+spirens doctor               # diagnose common setup problems
+spirens bootstrap            # idempotent first-run setup
+spirens configure-ipfs       # apply Kubo settings via HTTP API
+spirens gen-htpasswd         # generate Traefik dashboard credentials
+spirens encode-hostname-map  # encode dweb-proxy hostname config
+```
+
+Every command supports `--help` and `--dry-run` where applicable.
 
 ---
 
@@ -104,14 +128,20 @@ stack (swarm).
 
 ## Contributing
 
-Lint gates (pre-commit + `.github/workflows/lint.yml`) run yamllint,
-markdownlint, prettier, shellcheck, shfmt, ruff, and `docker compose config`
-across every yaml/markdown/shell/python/compose file. Install the hooks once:
+If you have [direnv](https://direnv.net/) + [asdf](https://asdf-vm.com/) +
+[uv](https://docs.astral.sh/uv/) installed, everything bootstraps automatically:
 
 ```bash
-pipx install pre-commit     # or brew / uv tool install
+cd spirens          # direnv creates venv, installs deps, sets up pre-commit
+spirens --version   # ready to go
+```
+
+Without direnv, set up manually:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+uv pip install -e ".[dev,docs]"    # or: pip install -e ".[dev,docs]"
 pre-commit install
-pre-commit run --all-files  # verify
 ```
 
 See [CLAUDE.md](CLAUDE.md) for the full contributor guide and config-file map.

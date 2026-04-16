@@ -5,16 +5,7 @@
   "MD013": false,
   "MD033": { "allowed_elements": ["br", "kbd", "sup", "sub", "details", "summary"] },
   "MD024": { "siblings_only": true },
-  "MD041": true,
-  "MD036": false,
   "MD029": { "style": "ordered" },
   "MD046": { "style": "fenced" },
-
-  "MD004": { "style": "dash" },
-
-  "MD040": false,
-
-  "MD060": false,
-
-  "MD031": { "list_items": false }
+  "MD004": { "style": "dash" }
 }

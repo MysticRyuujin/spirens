@@ -58,13 +58,13 @@ read what content B stored.
 
 The subdomain gateway fixes this by moving each CID to its own origin:
 
-```
+```text
 https://bafybei….ipfs.example.com/index.html
 ```
 
 Each CID gets an isolated origin; same-origin policy does its job. Kubo
 handles the rewrite when you enable `UseSubdomains: true` on the gateway's
-public-gateway entry — `scripts/configure-ipfs.sh` does this for you.
+public-gateway entry — `spirens configure-ipfs` does this for you.
 
 **Why wildcard DNS + wildcard TLS matter here:** `bafybei….ipfs.example.com`
 is a new hostname per CID. You need `*.ipfs.example.com` in DNS (so it
@@ -81,13 +81,13 @@ Both are set up by SPIRENS out of the box:
 
 Some Kubo settings can only be set via the HTTP API after the node starts
 (CORS, gateway registration, DNS resolvers). SPIRENS applies them via
-[`scripts/configure-ipfs.sh`](../scripts/configure-ipfs.sh), which
-`scripts/up.sh` runs automatically on first boot.
+`spirens configure-ipfs`, which
+`spirens up` runs automatically on first boot.
 
 Re-run after container recreation:
 
 ```bash
-./scripts/configure-ipfs.sh
+spirens configure-ipfs
 ```
 
 What it sets:

@@ -1,0 +1,10 @@
+# Runtime dependencies for SPIRENS CLI.
+# Normal users: pip install -r requirements.txt && pip install .
+# Contributors: direnv handles this automatically (see .envrc).
+typer>=0.24
+rich>=15.0
+InquirerPy>=0.3.4
+pydantic>=2.13
+python-dotenv>=1.2
+httpx>=0.28
+pyyaml>=6.0.3

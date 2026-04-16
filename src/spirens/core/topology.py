@@ -1,0 +1,148 @@
+"""Topology-aware Docker orchestration — SingleHostRunner and SwarmRunner.
+
+Both topologies share the same compose/config files and .env. The difference
+is how Docker commands are issued: ``docker compose`` for single-host,
+``docker stack deploy`` for Swarm (one stack per service, ordered).
+"""
+
+from __future__ import annotations
+
+import subprocess
+from abc import ABC, abstractmethod
+from enum import StrEnum
+from pathlib import Path
+
+from spirens.core.runner import CommandRunner
+from spirens.ui.console import log
+
+
+class Topology(StrEnum):
+    SINGLE = "single"
+    SWARM = "swarm"
+
+
+class StackRunner(ABC):
+    """Abstract base for topology-specific Docker orchestration."""
+
+    def __init__(self, runner: CommandRunner, repo_root: Path) -> None:
+        self.runner = runner
+        self.repo_root = repo_root
+
+    @property
+    @abstractmethod
+    def compose_dir(self) -> Path: ...
+
+    @abstractmethod
+    def up(
+        self, *, services: list[str] | None = None, env: dict[str, str] | None = None
+    ) -> None: ...
+
+    @abstractmethod
+    def down(self, *, volumes: bool = False) -> None: ...
+
+
+class SingleHostRunner(StackRunner):
+    """``docker compose`` for single-host topology."""
+
+    @property
+    def compose_dir(self) -> Path:
+        return self.repo_root / "compose" / "single-host"
+
+    def up(self, *, services: list[str] | None = None, env: dict[str, str] | None = None) -> None:
+        compose_file = str(self.compose_dir / "compose.yml")
+        if services:
+            log(f"single-host: restart {' '.join(services)}")
+            cmd = [
+                "docker",
+                "compose",
+                "-f",
+                compose_file,
+                "up",
+                "-d",
+                "--force-recreate",
+                *services,
+            ]
+        else:
+            log("single-host: up -d (all services in compose.yml include list)")
+            cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
+        self.runner.run(cmd, env=env)
+
+    def down(self, *, volumes: bool = False) -> None:
+        compose_file = str(self.compose_dir / "compose.yml")
+        if volumes:
+            log("docker compose down --volumes (DESTRUCTIVE)")
+            self.runner.run(["docker", "compose", "-f", compose_file, "down", "--volumes"])
+        else:
+            log("docker compose down (volumes preserved)")
+            self.runner.run(["docker", "compose", "-f", compose_file, "down"])
+
+
+SWARM_STACK_ORDER = ["traefik", "redis", "erpc", "ipfs", "dweb-proxy"]
+SWARM_STACK_ORDER_DOWN = list(reversed(SWARM_STACK_ORDER))
+
+SWARM_VOLUMES = [
+    "spirens_letsencrypt",
+    "spirens_ipfs_data",
+    "spirens_redis_data",
+    "spirens_eth_shared",
+]
+
+
+class SwarmRunner(StackRunner):
+    """``docker stack deploy`` for Swarm topology."""
+
+    @property
+    def compose_dir(self) -> Path:
+        return self.repo_root / "compose" / "swarm"
+
+    def up(self, *, services: list[str] | None = None, env: dict[str, str] | None = None) -> None:
+        for stack_name in SWARM_STACK_ORDER:
+            log(f"swarm: deploy {stack_name}")
+            stack_file = str(self.compose_dir / f"stack.{stack_name}.yml")
+            self.runner.run(
+                [
+                    "docker",
+                    "stack",
+                    "deploy",
+                    "--with-registry-auth",
+                    "-c",
+                    stack_file,
+                    f"spirens-{stack_name}",
+                ],
+                env=env,
+            )
+
+    def down(self, *, volumes: bool = False) -> None:
+        log("removing spirens-* stacks")
+        for stack_name in SWARM_STACK_ORDER_DOWN:
+            if _swarm_stack_exists(f"spirens-{stack_name}"):
+                self.runner.run(["docker", "stack", "rm", f"spirens-{stack_name}"])
+        if volumes:
+            log("--volumes: removing named volumes (DESTRUCTIVE)")
+            for vol in SWARM_VOLUMES:
+                if _volume_exists(vol):
+                    self.runner.run(["docker", "volume", "rm", vol])
+
+
+def get_runner(topology: Topology, runner: CommandRunner, repo_root: Path) -> StackRunner:
+    if topology is Topology.SINGLE:
+        return SingleHostRunner(runner, repo_root)
+    return SwarmRunner(runner, repo_root)
+
+
+def _swarm_stack_exists(name: str) -> bool:
+    result = subprocess.run(
+        ["docker", "stack", "ls", "--format", "{{.Name}}"],
+        capture_output=True,
+        text=True,
+    )
+    return name in result.stdout.splitlines()
+
+
+def _volume_exists(name: str) -> bool:
+    result = subprocess.run(
+        ["docker", "volume", "inspect", name],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0

@@ -15,7 +15,7 @@ handles three things that every request touches:
 
 A request arrives. Traefik walks this chain:
 
-```
+```text
 request
   ├─ entrypoint   (:443)
   ├─ router       (match on Host / rule)
@@ -86,7 +86,7 @@ on-LAN _and_ know the password.
 ## Cert hot-tips
 
 - **`letsencrypt/acme.json` must be mode 0600.** Traefik refuses to start
-  otherwise. `scripts/bootstrap.sh` enforces this.
+  otherwise. `spirens bootstrap` enforces this.
 - **Wildcards go in `tls.domains`**, not in the `Host()` rule. See the dweb-proxy
   router in [`compose/single-host/compose.dweb-proxy.yml`](../compose/single-host/compose.dweb-proxy.yml)
   for the pattern.
@@ -104,6 +104,7 @@ If you want to expose another service through Traefik:
 
 1. Put it on the `spirens_frontend` network (so Traefik can reach it).
 2. Add labels like this:
+
    ```yaml
    labels:
      - "traefik.enable=true"
@@ -114,6 +115,7 @@ If you want to expose another service through Traefik:
      - "traefik.http.routers.myapp.middlewares=security-headers@file"
      - "traefik.http.services.myapp.loadbalancer.server.port=<internal-port>"
    ```
+
 3. Add `myapp` to [`config/dns/records.yaml`](../config/dns/records.yaml) so
    DNS stays in sync.
 
