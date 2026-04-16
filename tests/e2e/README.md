@@ -55,9 +55,16 @@ subcommand to `remote.py` instead.
    (key-based auth). The harness uses `StrictHostKeyChecking=accept-new`,
    so first-run fingerprints are auto-accepted.
 
-3. Confirm the VM has Docker, `uv`, and Python 3.14 already installed.
-   If not, run the repo's `docs/01-prerequisites.md` steps first —
-   `p00_prereqs` will flag missing deps but does not install them.
+3. Install the host prereqs (uv, Python 3.14, Docker). On a fresh Ubuntu
+   snapshot, run:
+
+   ```bash
+   ./tests/e2e/remote.py bootstrap-host
+   ```
+
+   Idempotent — each step guards on a `command -v` check, so re-running
+   on a partially-prepared host is cheap. `p00_prereqs` then verifies
+   the install but does not itself install anything.
 
 ## Running
 

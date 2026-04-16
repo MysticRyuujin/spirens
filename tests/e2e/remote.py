@@ -18,6 +18,7 @@ Usage:
     ./tests/e2e/remote.py shell "<command>"    # last-resort ad-hoc (discouraged)
     ./tests/e2e/remote.py acme-json            # cat /root/spirens/letsencrypt/acme.json
     ./tests/e2e/remote.py clean                # down --volumes + prune
+    ./tests/e2e/remote.py bootstrap-host       # install uv + python 3.14 + docker (fresh VM)
 
 Anything that doesn't fit a subcommand — ADD ONE. Don't pile `shell` usage.
 """
@@ -116,6 +117,39 @@ def cmd_clean(env: TestEnv, _args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
+    """Install uv, Python 3.14, and Docker on a fresh Ubuntu snapshot.
+
+    Idempotent — each step guards on a `command -v` or `uv python list`
+    check so re-running against a partially-prepared host is cheap. Not a
+    harness phase; this is a one-off per snapshot restore.
+    """
+    # Each entry: (label, bash script). Scripts use `bash -lc` so $PATH
+    # picks up ~/.local/bin after the uv installer drops files there
+    # (Ubuntu's ~/.profile re-adds it when the directory exists).
+    steps: list[tuple[str, str]] = [
+        (
+            "uv",
+            "command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh",
+        ),
+        (
+            "python 3.14 (via uv)",
+            "export PATH=$HOME/.local/bin:$PATH && "
+            "(uv python list --only-installed | grep -q '^cpython-3\\.14') "
+            "|| uv python install 3.14",
+        ),
+        (
+            "docker",
+            "command -v docker >/dev/null || (curl -fsSL https://get.docker.com | sh)",
+        ),
+        ("docker service", "systemctl enable --now docker"),
+    ]
+    for label, script in steps:
+        print(f"\n--- {label} ---")
+        ssh_run(env, ["bash", "-lc", script])
+    return 0
+
+
 def cmd_sync(env: TestEnv, args: argparse.Namespace) -> int:
     """rsync the workstation worktree to /root/spirens on the VM."""
     from tests.e2e.harness.ssh import rsync_up
@@ -156,6 +190,7 @@ def main() -> int:
     p_shell.add_argument("command")
     sub.add_parser("acme-json")
     sub.add_parser("clean")
+    sub.add_parser("bootstrap-host", help="install uv, python 3.14, docker (idempotent)")
     p_sync = sub.add_parser("sync")
     p_sync.add_argument("--no-delete", action="store_true")
 
@@ -173,6 +208,7 @@ def main() -> int:
         "shell": cmd_shell,
         "acme-json": cmd_acme_json,
         "clean": cmd_clean,
+        "bootstrap-host": cmd_bootstrap_host,
         "sync": cmd_sync,
     }
     return dispatch[args.cmd](env, args)
