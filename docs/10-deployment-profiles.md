@@ -3,11 +3,11 @@
 SPIRENS works in three deployment models. Pick the one that matches your
 network, then follow the profile-specific guidance below.
 
-| Profile      | Who it's for                                  | Public IP needed | A records live at               | Protection story                          |
-| :----------- | :-------------------------------------------- | :--------------: | :------------------------------ | :---------------------------------------- |
-| **Internal** | Home lab, LAN-only access                     |        No        | Local DNS (router, Pi-hole, …)  | Network isolation — only LAN can reach    |
+| Profile      | Who it's for                                  | Public IP needed | A records live at               | Protection story                            |
+| :----------- | :-------------------------------------------- | :--------------: | :------------------------------ | :------------------------------------------ |
+| **Internal** | Home lab, LAN-only access                     |        No        | Local DNS (router, Pi-hole, …)  | Network isolation — only LAN can reach      |
 | **Public**   | VPS or dedicated server, serving the internet |       Yes        | Cloudflare (DNS-only or proxy)  | Rate limits, CF proxy, firewall, allowlists |
-| **Tunnel**   | Behind CGNAT, no port forwarding available    |        No        | Tunnel provider manages routing | Tunnel access controls, zero-trust        |
+| **Tunnel**   | Behind CGNAT, no port forwarding available    |        No        | Tunnel provider manages routing | Tunnel access controls, zero-trust          |
 
 !!! info "One thing every profile shares"
 
@@ -28,16 +28,16 @@ Every record needs a valid TLS certificate (obtained via ACME DNS-01 TXT
 records at your DNS provider). Where the **A record** lives depends on the
 profile:
 
-| Record         | Internal                   | Public                    | Tunnel                               |
-| :------------- | :------------------------- | :------------------------ | :----------------------------------- |
-| `rpc`          | Local DNS → internal IP    | Cloudflare A → public IP  | Tunnel hostname                      |
-| `ipfs`         | Local DNS → internal IP    | Cloudflare A → public IP  | Tunnel hostname                      |
-| `*.ipfs`       | Local DNS → internal IP    | Cloudflare A → public IP  | Per-subdomain or paid wildcard       |
-| `eth`          | Local DNS → internal IP    | Cloudflare A → public IP  | Tunnel hostname                      |
-| `*.eth`        | Local DNS → internal IP    | Cloudflare A → public IP  | Per-subdomain or paid wildcard       |
-| `ens-resolver` | Local DNS → internal IP    | Local DNS → internal IP   | Local DNS → internal IP              |
-| `traefik`      | Local DNS → internal IP    | Cloudflare A (proxied)    | Local DNS or tunnel                  |
-| `_acme-challenge` (TXT) | Cloudflare API  | Cloudflare API            | Cloudflare API                       |
+| Record                  | Internal                | Public                   | Tunnel                         |
+| :---------------------- | :---------------------- | :----------------------- | :----------------------------- |
+| `rpc`                   | Local DNS → internal IP | Cloudflare A → public IP | Tunnel hostname                |
+| `ipfs`                  | Local DNS → internal IP | Cloudflare A → public IP | Tunnel hostname                |
+| `*.ipfs`                | Local DNS → internal IP | Cloudflare A → public IP | Per-subdomain or paid wildcard |
+| `eth`                   | Local DNS → internal IP | Cloudflare A → public IP | Tunnel hostname                |
+| `*.eth`                 | Local DNS → internal IP | Cloudflare A → public IP | Per-subdomain or paid wildcard |
+| `ens-resolver`          | Local DNS → internal IP | Local DNS → internal IP  | Local DNS → internal IP        |
+| `traefik`               | Local DNS → internal IP | Cloudflare A (proxied)   | Local DNS or tunnel            |
+| `_acme-challenge` (TXT) | Cloudflare API          | Cloudflare API           | Cloudflare API                 |
 
 Note that `ens-resolver` and `traefik` are internal-use in **every** profile —
 they don't need public A records even on a public deployment.
@@ -211,7 +211,7 @@ http:
   middlewares:
     rate-limit:
       rateLimit:
-        average: 100   # requests per second
+        average: 100 # requests per second
         burst: 200
 ```
 
@@ -264,10 +264,10 @@ tunnel without exposing your host's IP or opening any inbound ports.
 2. Create a tunnel and configure it to route your service hostnames to
    Traefik's local address (e.g. `https://localhost:443`).
 3. TLS certificates: you have two options:
-      - **Let's Encrypt via DNS-01** (recommended) — works exactly as in the
-        other profiles since it only needs API access, not inbound ports.
-      - **Cloudflare Origin Certificates** — see
-        [03 — Certificates, Path B](03-certificates.md#path-b-cloudflare-origin-certificates).
+   - **Let's Encrypt via DNS-01** (recommended) — works exactly as in the
+     other profiles since it only needs API access, not inbound ports.
+   - **Cloudflare Origin Certificates** — see
+     [03 — Certificates, Path B](03-certificates.md#path-b-cloudflare-origin-certificates).
 
 !!! warning "Wildcard limitation on free Cloudflare plans"
 

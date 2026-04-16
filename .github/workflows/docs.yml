@@ -3,17 +3,20 @@
 # =============================================================================
 #  Builds mkdocs-material and pushes to GitHub Pages on every push to main.
 #  Manual trigger also available via workflow_dispatch.
+#
+#  NOTE: disabled on push while the repo is private (Pages requires a public
+#  repo on the free plan). Re-enable the push trigger when the repo goes public.
 # =============================================================================
 ---
 name: docs
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
-      - "pyproject.toml"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "docs/**"
+  #     - "mkdocs.yml"
+  #     - "pyproject.toml"
   workflow_dispatch:
 
 permissions:
