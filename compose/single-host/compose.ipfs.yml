@@ -33,7 +33,10 @@ services:
       # Gateway (8080) stays INTERNAL — Traefik reaches it via the bridge
       # network, not via a host port. No port binding here.
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:5001/api/v0/id"]
+      # All Kubo HTTP-API endpoints are POST-only; a bare GET returns 405.
+      # `--post-data=` forces wget to use POST with an empty body, which
+      # is what Kubo expects for /api/v0/id.
+      test: ["CMD-SHELL", "wget -qO /dev/null --post-data= http://localhost:5001/api/v0/id"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -61,7 +64,7 @@ services:
       # ─── Subdomain-style: {cid}.ipfs.example.com ────────────────
       # Kubo's subdomain gateway does the redirect/rewrite server-side;
       # Traefik only needs to route any *.ipfs.${BASE_DOMAIN} host to :8080.
-      - "traefik.http.routers.ipfs-sub.rule=HostRegexp(`^.+\\.${IPFS_GATEWAY_HOST:?unset}$`)"
+      - "traefik.http.routers.ipfs-sub.rule=HostRegexp(`.+.${IPFS_GATEWAY_HOST:?unset}`)"
       - "traefik.http.routers.ipfs-sub.entrypoints=websecure"
       - "traefik.http.routers.ipfs-sub.tls.certresolver=le"
       - "traefik.http.routers.ipfs-sub.tls.domains[0].main=${IPFS_GATEWAY_HOST}"

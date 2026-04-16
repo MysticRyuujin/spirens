@@ -6,8 +6,10 @@ CORS headers, public gateway registration, DNS resolvers for .eth.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import time
+from urllib.parse import quote
 
 import httpx
 
@@ -39,18 +41,18 @@ class KuboClient:
 
         Echoes the equivalent curl command through *runner* for
         auditability and dry-run support.
+
+        Kubo expects ``arg`` in the query string — posting them as
+        ``--data-urlencode`` form fields is silently ignored (tested
+        against Kubo 0.40.1, which returns ``400 argument "key" is required``).
         """
-        cmd = [
-            "curl",
-            "-fsS",
-            "-X",
-            "POST",
-            "--data-urlencode",
-            f"arg={key}",
-            "--data-urlencode",
-            f"arg={value}",
-            f"{self.api_url}/api/v0/config?bool=false&json=true",
-        ]
+        url = (
+            f"{self.api_url}/api/v0/config"
+            f"?arg={quote(key, safe='')}"
+            f"&arg={quote(value, safe='')}"
+            f"&json=true"
+        )
+        cmd = ["curl", "-fsS", "-X", "POST", url]
         runner.run(cmd)
 
     def apply_spirens_config(
@@ -83,10 +85,46 @@ class KuboClient:
             runner=runner,
         )
 
-        # Public gateway: subdomain mode
-        log(f"registering public gateway {gateway_host} (subdomain mode)")
-        gw_config = '{"NoDNSLink":false,"Paths":["/ipfs","/ipns"],"UseSubdomains":true}'
-        self.set_config(f"Gateway.PublicGateways.{gateway_host}", gw_config, runner=runner)
+        # Public gateways: path-style on the IPFS hostname, subdomain-style
+        # on its parent domain.
+        #
+        # Why two entries instead of `UseSubdomains=True` on ``ipfs.$BASE``?
+        # When UseSubdomains is true, Kubo redirects path requests to
+        # ``{cid}.ipfs.{HOSTNAME}``. If HOSTNAME is already ``ipfs.$BASE``
+        # the redirect target is ``{cid}.ipfs.ipfs.$BASE`` — doubled
+        # ``.ipfs.``, which we have no cert or router for. Splitting:
+        #
+        #   - ``ipfs.$BASE`` (subdomains=False):   path gateway, serves
+        #     ``ipfs.$BASE/ipfs/{cid}`` directly.
+        #   - ``$BASE`` (subdomains=True):          subdomain gateway,
+        #     recognises ``{cid}.ipfs.$BASE`` and ``{cid}.ipns.$BASE``.
+        #
+        # Traefik routes ``ipfs.$BASE`` (Host rule) and ``*.ipfs.$BASE``
+        # (HostRegexp) to the same Kubo backend; Kubo chooses which public-
+        # gateway entry applies by matching the Host header.
+        #
+        # Dotted-key caveat: ``Gateway.PublicGateways.<host>`` fails in
+        # Kubo ≥ 0.40 (dots are parsed as nested keys). We replace the whole
+        # map in one call. SPIRENS owns this key; any out-of-band additions
+        # will be clobbered on the next ``spirens configure-ipfs`` run.
+        base_domain = gateway_host.split(".", 1)[1] if "." in gateway_host else gateway_host
+        log(
+            f"registering public gateways: {gateway_host} (path) + "
+            f"{base_domain} (subdomain)"
+        )
+        public_gateways = {
+            gateway_host: {
+                "NoDNSLink": False,
+                "Paths": ["/ipfs", "/ipns"],
+                "UseSubdomains": False,
+            },
+            base_domain: {
+                "NoDNSLink": False,
+                "Paths": ["/ipfs", "/ipns"],
+                "UseSubdomains": True,
+            },
+        }
+        self.set_config("Gateway.PublicGateways", json.dumps(public_gateways), runner=runner)
 
         # DNS resolvers for .eth
         if doh_url:

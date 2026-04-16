@@ -32,7 +32,8 @@ services:
         protocol: tcp
         mode: host
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:5001/api/v0/id"]
+      # Kubo API is POST-only; --post-data= forces wget to POST (GET→405).
+      test: ["CMD-SHELL", "wget -qO /dev/null --post-data= http://localhost:5001/api/v0/id"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,7 +64,7 @@ services:
         - "traefik.http.routers.ipfs.middlewares=security-headers@file,cors-web3@file"
         - "traefik.http.routers.ipfs.service=ipfs"
 
-        - "traefik.http.routers.ipfs-sub.rule=HostRegexp(`^.+\\.${IPFS_GATEWAY_HOST:?unset}$`)"
+        - "traefik.http.routers.ipfs-sub.rule=HostRegexp(`.+.${IPFS_GATEWAY_HOST:?unset}`)"
         - "traefik.http.routers.ipfs-sub.entrypoints=websecure"
         - "traefik.http.routers.ipfs-sub.tls.certresolver=le"
         - "traefik.http.routers.ipfs-sub.tls.domains[0].main=${IPFS_GATEWAY_HOST}"
