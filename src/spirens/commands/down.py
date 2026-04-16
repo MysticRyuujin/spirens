@@ -62,7 +62,7 @@ def down(
     try:
         env_path = repo_root / ".env"
         if env_path.is_file():
-            cfg = SpirensConfig.from_env_file(str(env_path))
+            cfg = SpirensConfig.from_env_file(env_path)
             env = build_env(cfg, env_path)
     except Exception:
         pass

@@ -116,3 +116,37 @@ mkdocs build                   # build to site/
 The `docs/` directory is the source. Files are numbered 00-09 and consumed
 directly by mkdocs — no restructuring needed. The `docs/index.md` is the
 landing page, and `docs/cli.md` is the CLI reference.
+
+## E2E testing (rules for agents)
+
+The live-VM harness under `tests/e2e/` has a **thin invocation surface** on
+purpose — every ad-hoc SSH invocation, every inline `env FOO=bar ssh …`, every
+new command shape you improvise is another permission prompt the user has to
+click through. Stay inside the surface.
+
+**Allowed command shapes during E2E** — these are pre-approved in
+`.claude/settings.json`:
+
+```bash
+./tests/e2e/run.py [--phase NN] [--profile …] [--topology …] [--all]
+./tests/e2e/remote.py <subcommand> [args…]    # ssh / rsync / remote spirens calls
+./tests/e2e/cf.py     <subcommand> [args…]    # Cloudflare API helpers
+```
+
+**Rules:**
+
+- **No inline `ssh root@… '…'`.** If you need a new remote op, add a
+  subcommand to `remote.py`. One more subcommand is cheaper than a prompt
+  per invocation.
+- **No inline `env VAR=value …`.** Secrets and host config live in
+  `tests/e2e/.env.test` (gitignored). `remote.py` and `cf.py` load it.
+- **No improvising new Docker / curl commands against the VM.** Wrap them
+  in `remote.py` subcommands (`logs`, `ps`, `health`, etc.).
+- **Prefer `remote.py shell <phase-name>`** over one-off strings — the
+  phase name points at a scripted, logged, version-controlled operation.
+- **Findings go in `tests/e2e/report/findings.md`** (committed). Logs go
+  in `tests/e2e/report/logs/` (gitignored).
+
+If you're ever about to type a long `ssh` or `env VAR=… docker …` line,
+stop and add a `remote.py` subcommand instead. That is the whole point of
+the harness.

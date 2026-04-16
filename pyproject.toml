@@ -83,3 +83,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The E2E harness uses pytest-style module discovery (pNN_name.py) but the
+# modules are not pytest tests — they're live-VM phases invoked by
+# tests/e2e/run.py. Exclude them from unit-test collection.
+norecursedirs = ["tests/e2e"]
