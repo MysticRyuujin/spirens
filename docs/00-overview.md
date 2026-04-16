@@ -96,6 +96,14 @@ Pick **single-host** for getting started, a single VPS, or learning. Pick
 need NFS-backed state for Traefik's ACME storage. `spirens up` supports
 both via the first positional argument.
 
+## Deployment scenarios
+
+SPIRENS supports three deployment models: **internal** (LAN-only, no public
+exposure), **public** (VPS or dedicated server serving the internet), and
+**tunnel** (Cloudflare Tunnel or Tailscale Funnel, no inbound ports needed).
+The services and compose files are the same — only the DNS and network
+configuration differ. See [10 — Deployment Profiles](10-deployment-profiles.md).
+
 ## Where to next
 
 - [01 — Prerequisites](01-prerequisites.md)

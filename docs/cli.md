@@ -41,12 +41,12 @@ spirens up single -s erpc        # restart just one service
 spirens up single -s erpc -s redis   # restart multiple services
 ```
 
-| Flag | Description |
-| --- | --- |
-| `--dry-run` | Print commands without executing |
-| `--service`, `-s` | Restart specific service(s) — single-host only, repeatable |
-| `--skip-bootstrap` | Skip the bootstrap phase |
-| `--skip-configure-ipfs` | Skip post-deploy IPFS configuration |
+| Flag                    | Description                                                |
+| ----------------------- | ---------------------------------------------------------- |
+| `--dry-run`             | Print commands without executing                           |
+| `--service`, `-s`       | Restart specific service(s) — single-host only, repeatable |
+| `--skip-bootstrap`      | Skip the bootstrap phase                                   |
+| `--skip-configure-ipfs` | Skip post-deploy IPFS configuration                        |
 
 What it does: bootstrap → encode hostname-map → docker compose up (or stack
 deploy) → wait for Kubo API → apply IPFS config (CORS, gateway, .eth DoH).
@@ -64,11 +64,11 @@ spirens down single --volumes    # DESTRUCTIVE: remove named volumes
 spirens down single --dry-run
 ```
 
-| Flag | Description |
-| --- | --- |
-| `--dry-run` | Print commands without executing |
-| `--volumes` | Remove named volumes (ACME certs re-issued, IPFS pins gone) |
-| `--yes`, `-y` | Skip confirmation prompt for destructive operations |
+| Flag          | Description                                                 |
+| ------------- | ----------------------------------------------------------- |
+| `--dry-run`   | Print commands without executing                            |
+| `--volumes`   | Remove named volumes (ACME certs re-issued, IPFS pins gone) |
+| `--yes`, `-y` | Skip confirmation prompt for destructive operations         |
 
 ---
 
@@ -133,11 +133,11 @@ spirens configure-ipfs --no-restart
 spirens configure-ipfs --ipfs-api http://localhost:5001
 ```
 
-| Flag | Description |
-| --- | --- |
-| `--dry-run` | Print commands without executing |
+| Flag           | Description                                                |
+| -------------- | ---------------------------------------------------------- |
+| `--dry-run`    | Print commands without executing                           |
 | `--no-restart` | Skip container restart (settings apply after next restart) |
-| `--ipfs-api` | Kubo API URL (default: `http://127.0.0.1:5001`) |
+| `--ipfs-api`   | Kubo API URL (default: `http://127.0.0.1:5001`)            |
 
 Applies: API + Gateway CORS headers, public gateway registration (subdomain
 mode), DNS resolvers for `.eth` (DoH).

@@ -73,6 +73,32 @@ class TestSpirensConfig:
                 do_auth_token="",
             )
 
+    def test_deployment_profile_default(self) -> None:
+        cfg = SpirensConfig(
+            base_domain="example.com",
+            acme_email="admin@example.com",
+            cf_dns_api_token="real-token-123",
+        )
+        assert cfg.deployment_profile == "public"
+
+    def test_deployment_profile_internal(self) -> None:
+        cfg = SpirensConfig(
+            base_domain="example.com",
+            acme_email="admin@example.com",
+            cf_dns_api_token="real-token-123",
+            deployment_profile="internal",
+        )
+        assert cfg.deployment_profile == "internal"
+
+    def test_deployment_profile_invalid(self) -> None:
+        with pytest.raises(ValidationError, match="DEPLOYMENT_PROFILE"):
+            SpirensConfig(
+                base_domain="example.com",
+                acme_email="admin@example.com",
+                cf_dns_api_token="real-token-123",
+                deployment_profile="invalid",
+            )
+
     def test_dns_api_token_property(self) -> None:
         cfg = SpirensConfig(
             base_domain="example.com",

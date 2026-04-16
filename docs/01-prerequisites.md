@@ -17,56 +17,42 @@ Cloudflare, Gandi, whatever. Just:
 > **The act of buying is your responsibility.** SPIRENS does not automate
 > domain registration or registrar configuration.
 
-## A Cloudflare account + the domain added as a zone
+## A DNS provider for ACME challenges
 
-Sign up at [cloudflare.com](https://www.cloudflare.com). Add your domain as a
-new site (Free plan is enough for everything SPIRENS does). Cloudflare will
-tell you two nameservers; go to your registrar and replace the default
-nameservers with those two. Propagation takes anywhere from a minute to a few
-hours.
+SPIRENS uses Cloudflare (or DigitalOcean) for one critical purpose: **ACME
+DNS-01 challenges** — the TXT records that let Traefik obtain wildcard TLS
+certificates (`*.eth.example.com`, `*.ipfs.example.com`) from Let's Encrypt
+without opening port 80.
 
-Why Cloudflare and not some other DNS provider?
+Sign up at [cloudflare.com](https://www.cloudflare.com) and add your domain
+as a new zone (Free plan is enough). You'll need a scoped API token with
+`Zone.DNS:Edit` + `Zone:Read` on that zone.
 
-1. **DNS-01 challenge support.** Traefik uses Cloudflare's DNS API to solve
-   Let's Encrypt challenges, which is how we can issue wildcard certificates
-   (`*.eth.example.com`, `*.ipfs.example.com`) without opening port 80 to the
-   world during issuance.
-2. **Scoped API tokens.** The token SPIRENS needs is scoped to _one zone_,
-   _one permission_ (`Zone.DNS:Edit`). No Global API Key, no account-level
-   credentials.
-3. **Free WAF + edge.** The Traefik dashboard can be proxied through CF
-   (orange cloud) so your origin IP stays hidden and DDoS absorption happens
-   upstream. This is optional — SPIRENS works with CF proxy off too.
-
-The full step-by-step (zone add, nameserver update, DNS records, API token)
-lives in [02 — DNS & Cloudflare](02-dns-and-cloudflare.md).
+You do **not** need to move your DNS hosting to Cloudflare. Many users keep
+their A records on their router, Pi-hole, or another DNS provider, and only
+use Cloudflare for the ACME challenge API. See
+[02 — DNS & Cloudflare](02-dns-and-cloudflare.md) for the full setup.
 
 ## A host
 
 One Linux box with:
 
 - Docker 24+ and Docker Compose v2 (`docker compose version` ≥ 2.20)
-- Public ingress on TCP 80 and 443 (home lab: port-forward; VPS: just works)
+- Public ingress on TCP 80 and 443 — only needed for the **public** deployment
+  profile. Internal and tunnel profiles don't require inbound ports. See
+  [10 — Deployment Profiles](10-deployment-profiles.md).
 - 2 vCPU / 4 GB RAM / 40 GB SSD for the Core 4 without a local Ethereum node
 
 If you add a local Ethereum node on the same box, budget a separate volume:
 **4 TB NVMe + 16 GB RAM** is the comfortable floor. See
 [05 — Ethereum node](05-ethereum-node.md).
 
-### Alternative: Cloudflare Tunnel (no inbound ports)
+### Alternative: tunnels or internal-only
 
-If you can't forward 80/443 — behind CGNAT, strict ISP, shared hosting — you
-can front SPIRENS with a Cloudflare Tunnel (`cloudflared`) instead of exposing
-the host directly. Two trade-offs:
-
-1. You'll skip Traefik's Let's Encrypt step (CF terminates TLS at the edge);
-   switch to the **Cloudflare Origin Certificate** path described in
-   [03 — Certificates](03-certificates.md).
-2. The wildcard routing story requires a **paid CF plan** (Pro or above) to
-   terminate wildcards at the CF edge. On Free, you'd need one Tunnel
-   hostname per subdomain, which gets tedious for `*.eth.*` and `*.ipfs.*`.
-
-For most readers, straightforward port-forwarding is simpler.
+If you can't (or don't want to) forward ports 80/443, see
+[10 — Deployment Profiles](10-deployment-profiles.md) for the **tunnel**
+profile (Cloudflare Tunnel, Tailscale Funnel) and the **internal** profile
+(LAN-only, no public exposure).
 
 ## Shell literacy
 

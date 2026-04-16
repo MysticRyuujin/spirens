@@ -40,6 +40,7 @@ nav:
       - Prerequisites: 01-prerequisites.md
       - DNS & Cloudflare: 02-dns-and-cloudflare.md
       - Certificates: 03-certificates.md
+      - Deployment Profiles: 10-deployment-profiles.md
   - Services:
       - Traefik: 04-traefik.md
       - Ethereum Node: 05-ethereum-node.md

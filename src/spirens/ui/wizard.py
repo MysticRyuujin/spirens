@@ -29,6 +29,7 @@ class SetupWizard:
     def run(self) -> None:
         """Run the full wizard flow."""
         self._step_welcome()
+        self._step_deployment_profile()
         self._step_domain()
         self._step_dns_provider()
         self._step_hostnames()
@@ -50,8 +51,29 @@ class SetupWizard:
         )
         console.print()
 
+    def _step_deployment_profile(self) -> None:
+        console.print("[bold]Step 1: Deployment Profile[/bold]\n")
+        console.print(
+            "  How will clients reach your SPIRENS services?\n"
+            "  See [link=https://mysticryuujin.github.io/spirens/10-deployment-profiles/]"
+            "docs/10-deployment-profiles.md[/link] for details.\n"
+        )
+
+        choices = [
+            {"name": "Internal — LAN only, no public exposure", "value": "internal"},
+            {"name": "Public — services accessible from the internet", "value": "public"},
+            {"name": "Tunnel — Cloudflare Tunnel or Tailscale Funnel", "value": "tunnel"},
+        ]
+        profile = inquirer.select(
+            message="Deployment profile:",
+            choices=choices,
+            default=self.existing.get("DEPLOYMENT_PROFILE", "public"),
+        ).execute()
+        self.values["DEPLOYMENT_PROFILE"] = profile
+        console.print()
+
     def _step_domain(self) -> None:
-        console.print("[bold]Step 1: Domain Configuration[/bold]\n")
+        console.print("[bold]Step 2: Domain Configuration[/bold]\n")
 
         self.values["BASE_DOMAIN"] = inquirer.text(
             message="Base domain (e.g. example.com):",
@@ -67,7 +89,13 @@ class SetupWizard:
         console.print()
 
     def _step_dns_provider(self) -> None:
-        console.print("[bold]Step 2: DNS Provider[/bold]\n")
+        console.print("[bold]Step 3: DNS Provider[/bold]\n")
+        if self.values.get("DEPLOYMENT_PROFILE") != "public":
+            console.print(
+                "  [dim]Your DNS provider is used for ACME certificate challenges (TXT\n"
+                "  records) so Traefik can obtain wildcard TLS certs. A records for\n"
+                "  service hostnames should be configured in your local DNS or tunnel.[/dim]\n"
+            )
 
         choices = [
             {"name": "Cloudflare", "value": ProviderName.CLOUDFLARE},
@@ -119,7 +147,7 @@ class SetupWizard:
         console.print()
 
     def _step_hostnames(self) -> None:
-        console.print("[bold]Step 3: Service Hostnames[/bold]\n")
+        console.print("[bold]Step 4: Service Hostnames[/bold]\n")
         bd = self.values["BASE_DOMAIN"]
         defaults = {
             "TRAEFIK_DASHBOARD_HOST": f"traefik.{bd}",
@@ -149,7 +177,7 @@ class SetupWizard:
         console.print()
 
     def _step_ethereum(self) -> None:
-        console.print("[bold]Step 4: Ethereum Node[/bold]\n")
+        console.print("[bold]Step 5: Ethereum Node[/bold]\n")
 
         has_node = inquirer.confirm(
             message="Do you have a local Ethereum node?",
@@ -166,7 +194,7 @@ class SetupWizard:
         console.print()
 
     def _step_vendors(self) -> None:
-        console.print("[bold]Step 5: Vendor Providers (optional fallbacks)[/bold]\n")
+        console.print("[bold]Step 6: Vendor Providers (optional fallbacks)[/bold]\n")
 
         configure = inquirer.confirm(
             message="Configure vendor fallback providers?",
@@ -189,7 +217,7 @@ class SetupWizard:
         console.print()
 
     def _step_dashboard_credentials(self) -> None:
-        console.print("[bold]Step 6: Traefik Dashboard Credentials[/bold]\n")
+        console.print("[bold]Step 7: Traefik Dashboard Credentials[/bold]\n")
 
         user = inquirer.text(
             message="Dashboard username:",
@@ -213,36 +241,46 @@ class SetupWizard:
         console.print()
 
     def _step_optional_modules(self) -> None:
-        console.print("[bold]Step 7: Optional Modules[/bold]\n")
+        console.print("[bold]Step 8: Optional Modules[/bold]\n")
 
-        enable_ddns = inquirer.confirm(
-            message="Enable Cloudflare DDNS (keep DNS pointing at dynamic IP)?",
-            default=self.values.get("DNS_PROVIDER") == ProviderName.CLOUDFLARE,
-        ).execute()
+        profile = self.values.get("DEPLOYMENT_PROFILE", "public")
 
-        if enable_ddns:
-            default_records = self.existing.get(
-                "DDNS_RECORDS", "rpc,ipfs,*.ipfs,eth,*.eth,ens-resolver,traefik"
+        # DDNS and dns-sync only make sense for public deployments where
+        # Cloudflare hosts the A records and the IP may be dynamic.
+        if profile == "public":
+            enable_ddns = inquirer.confirm(
+                message="Enable Cloudflare DDNS (keep DNS pointing at dynamic IP)?",
+                default=self.values.get("DNS_PROVIDER") == ProviderName.CLOUDFLARE,
+            ).execute()
+
+            if enable_ddns:
+                default_records = self.existing.get(
+                    "DDNS_RECORDS", "rpc,ipfs,*.ipfs,eth,*.eth,ens-resolver,traefik"
+                )
+                self.values["DDNS_RECORDS"] = inquirer.text(
+                    message="DDNS records (comma-separated subdomains):",
+                    default=default_records,
+                ).execute()
+
+            enable_dns_sync = inquirer.confirm(
+                message="Enable DNS record auto-sync (reconcile config/dns/records.yaml)?",
+                default=False,
+            ).execute()
+
+            if enable_dns_sync:
+                self.values["PUBLIC_IP"] = inquirer.text(
+                    message="Public IP ('auto' to detect, or a literal IPv4):",
+                    default=self.existing.get("PUBLIC_IP", "auto"),
+                ).execute()
+                self.values["DNS_SYNC_INTERVAL"] = inquirer.text(
+                    message="Sync interval ('one-shot' or duration like '1h'):",
+                    default=self.existing.get("DNS_SYNC_INTERVAL", "1h"),
+                ).execute()
+        else:
+            console.print(
+                f"  [dim]Skipping DDNS and dns-sync (not applicable for {profile} profile).[/dim]"
             )
-            self.values["DDNS_RECORDS"] = inquirer.text(
-                message="DDNS records (comma-separated subdomains):",
-                default=default_records,
-            ).execute()
 
-        enable_dns_sync = inquirer.confirm(
-            message="Enable DNS record auto-sync (reconcile config/dns/records.yaml)?",
-            default=False,
-        ).execute()
-
-        if enable_dns_sync:
-            self.values["PUBLIC_IP"] = inquirer.text(
-                message="Public IP ('auto' to detect, or a literal IPv4):",
-                default=self.existing.get("PUBLIC_IP", "auto"),
-            ).execute()
-            self.values["DNS_SYNC_INTERVAL"] = inquirer.text(
-                message="Sync interval ('one-shot' or duration like '1h'):",
-                default=self.existing.get("DNS_SYNC_INTERVAL", "1h"),
-            ).execute()
         console.print()
 
     def _step_confirm_and_write(self) -> None:
@@ -291,6 +329,9 @@ class SetupWizard:
         lines = [
             "# Generated by: spirens setup",
             "# See .env.example for full documentation of each variable.",
+            "",
+            "# ───── Deployment Profile ───────────────────────────────────────────────",
+            f"DEPLOYMENT_PROFILE={self.values.get('DEPLOYMENT_PROFILE', 'public')}",
             "",
             "# ───── Core ─────────────────────────────────────────────────────────────",
             f"BASE_DOMAIN={self.values.get('BASE_DOMAIN', '')}",

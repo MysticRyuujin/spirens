@@ -85,7 +85,7 @@ version.
    ```
 
 6. **Read the docs in order** (`docs/00-overview.md` → `docs/09-troubleshooting.md`)
-   whenever you want to understand *why* a config is shaped a certain way.
+   whenever you want to understand _why_ a config is shaped a certain way.
 
 ---
 

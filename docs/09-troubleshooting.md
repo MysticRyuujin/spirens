@@ -92,7 +92,7 @@ hostname.
 - Flip the record to DNS-only (grey cloud). The cert at the origin is
   the one the browser sees.
 - **Or** switch to Cloudflare Origin Certificates
-  ([`03-certificates.md#path-b`](03-certificates.md#path-b--cloudflare-origin-certificates))
+  ([`03-certificates.md#path-b`](03-certificates.md#path-b-cloudflare-origin-certificates))
   and set CF to **Full (strict)**.
 
 ---
@@ -237,7 +237,7 @@ host`.
 **Fix.** Either:
 
 - Add the record manually per the table in
-  [`02-dns-and-cloudflare.md#required-records`](02-dns-and-cloudflare.md#required-records).
+  [`02-dns-and-cloudflare.md#dns-records`](02-dns-and-cloudflare.md#dns-records).
 - Or include the `dns-sync` module and run it once:
 
   ```bash
@@ -277,22 +277,53 @@ docker compose -f compose/single-host/compose.yml up -d
 
 ---
 
+## Internal deployment: services not reachable from LAN
+
+**Symptom.** `curl https://rpc.example.com` from another machine on your LAN
+returns `Could not resolve host` or connects to the wrong IP.
+
+**Why.** Your local DNS isn't configured to resolve SPIRENS hostnames to the
+host's internal IP. The name either resolves to nothing, to a public IP that
+isn't routable from your LAN (hairpin NAT issue), or isn't in DNS at all.
+
+**Fix.** Configure local DNS overrides for every SPIRENS hostname (including
+wildcards). See
+[10 — Deployment Profiles: Internal](10-deployment-profiles.md#setting-up-local-dns)
+for per-tool instructions (Pi-hole, OPNsense, dnsmasq).
+
+---
+
+## Tunnel deployment: wildcard subdomains don't work
+
+**Symptom.** `rpc.example.com` works through the tunnel, but
+`vitalik.eth.example.com` returns a Cloudflare error or connection refused.
+
+**Why.** Free Cloudflare Tunnel plans don't support wildcard hostnames. Each
+subdomain must be added individually in the tunnel config.
+
+**Fix.** Either:
+
+- Add individual tunnel hostnames for the ENS/IPFS names you use most
+- Upgrade to a paid Cloudflare plan that supports wildcard tunnels
+- Use Tailscale Funnel as an alternative (see
+  [10 — Deployment Profiles: Tunnel](10-deployment-profiles.md#profile-tunnel))
+
+---
+
 ## CF Tunnel users: ports 80/443 aren't exposed
 
-If you can't forward ports (CGNAT, office network), use
-`cloudflared tunnel` to front SPIRENS. Two changes:
+If you can't forward ports (CGNAT, office network), see the **tunnel
+profile** in
+[10 — Deployment Profiles](10-deployment-profiles.md#cloudflare-tunnel)
+for a full walkthrough. The short version:
 
-1. In Cloudflare's **Zero Trust → Access → Tunnels**, create a tunnel
-   pointing at your host. Route your hostnames through it.
-2. Switch to Cloudflare Origin Certificates
-   ([`03-certificates.md#path-b`](03-certificates.md#path-b--cloudflare-origin-certificates))
-   — LE DNS-01 still works, but if you can't reach :80/:443 from the
-   internet, Origin Certs skip the HTTP reachability side of things
-   entirely.
-
-On the free CF plan, wildcard hosts through a Tunnel need one manual
-hostname per subdomain (no native wildcard support). That's usually the
-signal to bite the bullet and get a proper public IP.
+1. Install `cloudflared` and create a tunnel pointing at Traefik's local
+   address.
+2. LE DNS-01 still works for certificates (it doesn't need inbound ports).
+   Alternatively, switch to Cloudflare Origin Certificates
+   ([`03-certificates.md#path-b`](03-certificates.md#path-b-cloudflare-origin-certificates)).
+3. On the free CF plan, wildcard hosts through a Tunnel need one manual
+   hostname per subdomain (no native wildcard support).
 
 ---
 

@@ -45,11 +45,11 @@ Commit messages are brief and do not mention AI tooling.
 
 Contributors with direnv + asdf + uv get automatic setup on `cd`:
 
-| File | Purpose |
-| --- | --- |
-| `.tool-versions` | asdf — pins Python 3.14.4 |
-| `.envrc` | direnv — creates venv, installs deps, sets up pre-commit |
-| `requirements.txt` | Runtime deps only (for normal users: `pip install .`) |
+| File               | Purpose                                                  |
+| ------------------ | -------------------------------------------------------- |
+| `.tool-versions`   | asdf — pins Python 3.14.4                                |
+| `.envrc`           | direnv — creates venv, installs deps, sets up pre-commit |
+| `requirements.txt` | Runtime deps only (for normal users: `pip install .`)    |
 
 Normal users (not contributing) just need `pip install .` from the repo root.
 

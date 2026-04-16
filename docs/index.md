@@ -6,13 +6,13 @@ A turnkey, modular, educational reference for self-hosting a private Web3
 infrastructure stack. Clone it, point a domain at Cloudflare, run the setup
 wizard, and bring up:
 
-| Endpoint | What it is |
-| --- | --- |
-| `https://rpc.example.com` | [eRPC](https://github.com/erpc/erpc) JSON-RPC — local-first, with vendor fallback & caching |
-| `https://ipfs.example.com` | Your branded [IPFS Kubo](https://github.com/ipfs/kubo) HTTP gateway (with subdomain support) |
-| `https://*.eth.example.com` | ENS → IPFS gateway via [dweb-proxy](https://github.com/ethlimo/dweb-proxy-api) |
-| `https://ens-resolver.example.com` | DoH endpoint Kubo uses for `.eth` DNSLink resolution |
-| `https://traefik.example.com` | [Traefik](https://traefik.io) dashboard (basic-auth + IP allowlist) |
+| Endpoint                           | What it is                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| `https://rpc.example.com`          | [eRPC](https://github.com/erpc/erpc) JSON-RPC — local-first, with vendor fallback & caching  |
+| `https://ipfs.example.com`         | Your branded [IPFS Kubo](https://github.com/ipfs/kubo) HTTP gateway (with subdomain support) |
+| `https://*.eth.example.com`        | ENS → IPFS gateway via [dweb-proxy](https://github.com/ethlimo/dweb-proxy-api)               |
+| `https://ens-resolver.example.com` | DoH endpoint Kubo uses for `.eth` DNSLink resolution                                         |
+| `https://traefik.example.com`      | [Traefik](https://traefik.io) dashboard (basic-auth + IP allowlist)                          |
 
 TLS end-to-end via Let's Encrypt (Cloudflare DNS-01). Wildcard certs included.
 

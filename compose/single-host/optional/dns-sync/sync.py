@@ -128,7 +128,8 @@ def reconcile(token: str, zone_id: str, entries: list[dict], base: str, public_i
         cur = existing.get(key)
         if cur is None:
             log(
-                f"CREATE {want['type']:<5} {want['name']:<40} → {want['content']} (proxied={want['proxied']})"
+                f"CREATE {want['type']:<5} {want['name']:<40}"
+                f" → {want['content']} (proxied={want['proxied']})"
             )
             http("POST", f"/zones/{zone_id}/dns_records", token, want)
             continue

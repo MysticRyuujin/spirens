@@ -13,6 +13,12 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class SpirensConfig(BaseModel):
+    # --- Deployment profile ----------------------------------------------
+    deployment_profile: str = Field(
+        default="public",
+        description="Deployment profile: internal, public, or tunnel",
+    )
+
     # --- Required --------------------------------------------------------
     base_domain: str = Field(..., description="Apex domain (e.g. example.com)")
     acme_email: str = Field(..., description="Let's Encrypt registration email")
@@ -62,6 +68,16 @@ class SpirensConfig(BaseModel):
             self.dweb_eth_host = f"eth.{bd}"
         if not self.dweb_resolver_host:
             self.dweb_resolver_host = f"ens-resolver.{bd}"
+        return self
+
+    @model_validator(mode="after")
+    def validate_deployment_profile(self) -> SpirensConfig:
+        """Ensure deployment_profile is a known value."""
+        valid = ("internal", "public", "tunnel")
+        if self.deployment_profile not in valid:
+            raise ValueError(
+                f"DEPLOYMENT_PROFILE must be one of {valid}, got {self.deployment_profile!r}"
+            )
         return self
 
     @model_validator(mode="after")

@@ -121,6 +121,18 @@ def _check_port(port: int) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def _get_deployment_profile(repo_root: Path) -> str:
+    """Read DEPLOYMENT_PROFILE from .env, defaulting to 'public'."""
+    env_path = repo_root / ".env"
+    if not env_path.exists():
+        return "public"
+    try:
+        config = SpirensConfig.from_env_file(env_path)
+        return config.deployment_profile
+    except Exception:
+        return "public"
+
+
 def _check_dns_token(repo_root: Path) -> tuple[bool, str]:
     env_path = repo_root / ".env"
     if not env_path.exists():
@@ -180,12 +192,17 @@ def doctor() -> None:
     passed, detail = _check_network("spirens_backend")
     checks.append(("network: spirens_backend", (passed, detail), "Run: spirens bootstrap"))
 
-    # Ports
-    passed, detail = _check_port(80)
-    checks.append(("Port 80", (passed, detail), "Stop the process using port 80"))
+    # Ports — only relevant for public deployments where the host listens
+    # directly on 80/443. Internal and tunnel profiles skip this.
+    profile = _get_deployment_profile(repo_root)
+    if profile == "public":
+        passed, detail = _check_port(80)
+        checks.append(("Port 80", (passed, detail), "Stop the process using port 80"))
 
-    passed, detail = _check_port(443)
-    checks.append(("Port 443", (passed, detail), "Stop the process using port 443"))
+        passed, detail = _check_port(443)
+        checks.append(("Port 443", (passed, detail), "Stop the process using port 443"))
+    else:
+        checks.append(("Port 80/443", (True, f"skipped ({profile} profile)"), ""))
 
     # Cloudflare token
     passed, detail = _check_dns_token(repo_root)

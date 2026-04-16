@@ -1,8 +1,15 @@
 # 03 · Certificates
 
-Every externally-reachable SPIRENS endpoint is TLS-terminated by Traefik.
-There are two workable paths — SPIRENS picks one as the default and
-documents the other as a fully-working alternative.
+!!! info "Certs are required for every deployment profile"
+
+    TLS certificates are required regardless of whether your services are
+    public or internal. Even a LAN-only deployment needs valid certs for HTTPS.
+    The DNS-01 challenge works without any inbound ports or public A records —
+    it only needs API access to create TXT records at your DNS provider.
+
+Every SPIRENS endpoint is TLS-terminated by Traefik. There are two workable
+paths — SPIRENS picks one as the default and documents the other as a
+fully-working alternative.
 
 | Path                                       | Default? | Wildcard support  | Works behind CF proxy |          Renewal          |
 | :----------------------------------------- | :------: | :---------------: | :-------------------: | :-----------------------: |
@@ -133,6 +140,7 @@ Use this if:
    Add a second `--providers.file.directory=/etc/traefik` or leave
    `providers.file.filename` pointing at `dynamic.yml` and add a second file
    entry. Traefik picks up both.
+
 7. In each service's labels, **drop** the `tls.certresolver=le` line — the
    default TLS certificate from Origin Cert will be served automatically.
 8. In the CF dashboard, set **SSL/TLS → Overview → Encryption Mode** to
