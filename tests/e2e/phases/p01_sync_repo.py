@@ -37,13 +37,14 @@ def sync(ctx: Context) -> None:
     ssh_run(ctx.env, ["mkdir", "-p", REMOTE_REPO])
     rsync_up(ctx.env, REPO_ROOT, REMOTE_REPO, exclude=EXCLUDES)
 
-    # Install (or refresh) the venv.
+    # Install (or refresh) the venv. [dev] pulls in pytest for the VM-side
+    # smoke test below.
     ssh_run(
         ctx.env,
         [
             "bash",
             "-lc",
-            f"cd {REMOTE_REPO} && uv venv --python 3.14 && uv pip install -e .",
+            f"cd {REMOTE_REPO} && uv venv --python 3.14 --clear && uv pip install -e '.[dev]'",
         ],
     )
 
