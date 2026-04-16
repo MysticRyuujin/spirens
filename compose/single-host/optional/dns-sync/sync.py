@@ -38,8 +38,16 @@ def http(method: str, path: str, token: str, body: dict | None = None) -> dict:
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode(errors="replace")
+        die(
+            f"Cloudflare API {method} {path} → HTTP {e.code}\n"
+            f"  request body: {json.dumps(body)}\n"
+            f"  response:     {err_body}"
+        )
 
 
 def parse_records_yaml(path: str) -> list[dict]:
@@ -55,9 +63,12 @@ def parse_records_yaml(path: str) -> list[dict]:
                 continue
             inner = m.group(1)
             entry: dict[str, object] = {}
-            for part in re.findall(r'(\w+)\s*:\s*("[^"]*"|\S+)', inner):
+            # Values: quoted-string OR run-of-non-comma-non-whitespace. The
+            # earlier `\S+` greedily swallowed the field-separating comma
+            # (e.g. value became "rpc," for `name: rpc,`).
+            for part in re.findall(r'(\w+)\s*:\s*("[^"]*"|[^,\s]+)', inner):
                 k, v = part
-                v = v.strip()
+                v = v.strip().rstrip(",")
                 if v.startswith('"') and v.endswith('"'):
                     v = v[1:-1]
                 elif v.lower() == "true":
@@ -107,15 +118,33 @@ def fqdn(name: str, base: str) -> str:
     return f"{name}.{base}"
 
 
+def _is_rfc1918(ip: str) -> bool:
+    """True for 10/8, 172.16/12, 192.168/16."""
+    parts = ip.split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        a, b = int(parts[0]), int(parts[1])
+    except ValueError:
+        return False
+    return a == 10 or (a == 172 and 16 <= b <= 31) or (a == 192 and b == 168)
+
+
 def desired(entry: dict, base: str, public_ip: str) -> dict:
     rec_type = entry["type"]
     content = public_ip if rec_type in ("A",) else entry.get("content", "")
+    # Cloudflare rejects `proxied: true` when the target is an RFC1918
+    # address (API error 9003). For internal-profile deployments the record
+    # can only be DNS-only; downgrade silently so sync still succeeds.
+    proxied = bool(entry.get("proxied", False))
+    if proxied and rec_type == "A" and _is_rfc1918(content):
+        proxied = False
     return {
         "type": rec_type,
         "name": fqdn(entry["name"], base),
         "content": content,
         "ttl": 1,  # 1 = automatic
-        "proxied": bool(entry.get("proxied", False)),
+        "proxied": proxied,
         "comment": entry.get("comment", "spirens-managed"),
     }
 

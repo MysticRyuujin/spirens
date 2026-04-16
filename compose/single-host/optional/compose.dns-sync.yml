@@ -18,7 +18,12 @@
 services:
   dns-sync:
     build:
-      context: ./dns-sync
+      # Path is relative to the INCLUDER (compose/single-host/compose.yml),
+      # not this file, per Compose `include:` semantics. Using
+      # `optional/dns-sync` makes this file work under both `include:` and
+      # direct `docker compose -f optional/compose.dns-sync.yml run` when
+      # invoked from `compose/single-host/` with `--project-directory .`.
+      context: optional/dns-sync
     image: spirens/dns-sync:local
     container_name: spirens-dns-sync
     restart: "no"          # one-shot by default
