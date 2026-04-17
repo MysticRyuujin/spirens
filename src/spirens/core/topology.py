@@ -150,19 +150,21 @@ def get_runner(topology: Topology, runner: CommandRunner, repo_root: Path) -> St
 
 
 def _wait_for_volume_free(name: str, *, timeout: float = 60.0, interval: float = 2.0) -> None:
-    """Block until no running container references ``name``.
+    """Block until no container — running or stopped — references ``name``.
 
-    Uses ``docker ps --filter volume=<name>`` to count referencing
-    containers. Returns on first empty result, or raises on timeout so
-    the caller sees a clear error instead of a generic 'volume is in
-    use' from the subsequent rm.
+    ``docker volume rm`` rejects the volume while ANY container (even in
+    ``Exited`` / ``Created`` state) still has it mounted, so we use
+    ``docker ps -a``. Swarm tears tasks down asynchronously and sometimes
+    leaves a transiently-stopped container behind for a few seconds; the
+    poll waits that out rather than letting the caller hit a raw
+    "volume is in use" error.
     """
     import time
 
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = subprocess.run(
-            ["docker", "ps", "--filter", f"volume={name}", "--format", "{{.ID}}"],
+            ["docker", "ps", "-a", "--filter", f"volume={name}", "--format", "{{.ID}}"],
             capture_output=True,
             text=True,
         )

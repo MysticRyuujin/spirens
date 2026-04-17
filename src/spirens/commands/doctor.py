@@ -147,26 +147,32 @@ def _check_port(port: int) -> tuple[bool, str]:
     except Exception as exc:
         return False, str(exc)
 
-    # Port is bound. Ask dockerd who owns it — PublishedPorts on a
-    # running spirens-traefik container means we're looking at our own
-    # ingress, which is the expected state post-`up`.
+    # Port is bound. Ask dockerd who's publishing it — if a Traefik
+    # container from either topology holds it, that's the expected
+    # post-`up` state (not a conflict). Single-host container is literally
+    # ``spirens-traefik``; swarm task containers are named
+    # ``spirens-traefik_traefik.<slot>.<id>`` which all start with
+    # ``spirens-traefik``.
     try:
-        inspect = subprocess.run(
+        ps = subprocess.run(
             [
                 "docker",
-                "inspect",
+                "ps",
+                "--filter",
+                f"publish={port}",
                 "--format",
-                "{{range .NetworkSettings.Ports}}{{range .}}{{.HostPort}} {{end}}{{end}}",
-                "spirens-traefik",
+                "{{.Names}}",
             ],
             capture_output=True,
             text=True,
             timeout=5,
         )
-        if inspect.returncode == 0 and str(port) in inspect.stdout.split():
-            return True, f"port {port} held by spirens-traefik (expected)"
+        if ps.returncode == 0:
+            owners = [n.strip() for n in ps.stdout.splitlines() if n.strip()]
+            if any(n.startswith("spirens-traefik") for n in owners):
+                return True, f"port {port} held by spirens-traefik (expected)"
     except Exception:
-        # docker unavailable or container missing — fall through to "in use"
+        # docker unavailable — fall through to "in use"
         pass
     return False, f"port {port} already in use"
 
