@@ -46,7 +46,7 @@ def _disable_live_restore_if_set(ctx: Context) -> None:
     if not cfg.get("live-restore"):
         return  # already off / absent
 
-    print(f"daemon.json has live-restore=true — temporarily disabling for swarm")
+    print("daemon.json has live-restore=true — temporarily disabling for swarm")
     ssh_run(ctx.env, ["cp", "-a", DAEMON_JSON, BACKUP])
     cfg["live-restore"] = False
     new = json.dumps(cfg, indent=2)

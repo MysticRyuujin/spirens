@@ -65,6 +65,60 @@ def delete_record(env: TestEnv, record_id: str) -> None:
     _req(env, "DELETE", f"/zones/{zid}/dns_records/{record_id}")
 
 
+def create_record(
+    env: TestEnv,
+    *,
+    type_: str,
+    name: str,
+    content: str,
+    ttl: int = 60,
+    proxied: bool = False,
+) -> dict[str, Any]:
+    """Create a DNS record. Returns the created record dict."""
+    zid = zone_id(env)
+    r = _req(
+        env,
+        "POST",
+        f"/zones/{zid}/dns_records",
+        body={
+            "type": type_,
+            "name": name,
+            "content": content,
+            "ttl": ttl,
+            "proxied": proxied,
+        },
+    )
+    result: dict[str, Any] = r.get("result", {})
+    return result
+
+
+def upsert_a_record(
+    env: TestEnv,
+    *,
+    name: str,
+    ip: str,
+    proxied: bool = False,
+) -> dict[str, Any]:
+    """Create or update an A record. Returns the resulting record.
+
+    Wildcard-safe: Cloudflare accepts ``*.ipfs.<zone>`` as a valid A-record
+    name (it's stored as a wildcard, queried via ALIAS/CNAME substitution
+    at resolve time). Free plans DNS-only (proxied=False) for wildcards.
+    """
+    fqdn = name if name.endswith(env.domain) else f"{name}.{env.domain}"
+    # Check for an existing record with this exact name.
+    existing = [r for r in list_records(env, type_="A") if r["name"] == fqdn]
+    for r in existing:
+        # If the A record already points at the right IP, no-op.
+        if r.get("content") == ip and r.get("proxied") == proxied:
+            return r
+        # Otherwise replace — delete the old, create fresh. CF has an
+        # update endpoint but create-after-delete is simpler and we only
+        # hit it on drift.
+        delete_record(env, r["id"])
+    return create_record(env, type_="A", name=fqdn, content=ip, proxied=proxied)
+
+
 def purge_non_ns(env: TestEnv) -> int:
     """Delete every non-NS record on the zone. Returns the count deleted."""
     deleted = 0

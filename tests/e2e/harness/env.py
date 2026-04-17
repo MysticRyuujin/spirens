@@ -17,6 +17,11 @@ EXAMPLE = ENV_FILE.with_suffix(".test.example")
 
 @dataclass(frozen=True)
 class TestEnv:
+    # Opt out of pytest's Test* auto-collection — this is a plain
+    # dataclass, not a test case. Without this pytest prints a
+    # PytestCollectionWarning on import.
+    __test__ = False
+
     host: str
     ip: str
     user: str
@@ -25,6 +30,8 @@ class TestEnv:
     eth_local_url: str
     cf_api_email: str
     cf_dns_api_token: str
+    profile: str  # "internal" | "public" — default "internal" if unset
+    public_ip: str  # IP public DNS A records should point at; empty for internal
 
 
 def _parse(path: Path) -> dict[str, str]:
@@ -55,6 +62,19 @@ def load() -> TestEnv:
             raise SystemExit(f"{ENV_FILE.name}: missing required key {key}")
         return v
 
+    profile = raw.get("SPIRENS_TEST_PROFILE", "internal").strip() or "internal"
+    if profile not in ("internal", "public"):
+        raise SystemExit(
+            f"{ENV_FILE.name}: SPIRENS_TEST_PROFILE must be 'internal' or 'public', got {profile!r}"
+        )
+
+    public_ip = raw.get("SPIRENS_TEST_PUBLIC_IP", "").strip()
+    if profile == "public" and not public_ip:
+        # Convenient default — many public setups have the VM directly on
+        # the routable IP, so SSH IP == public IP. Operators behind NAT
+        # must set SPIRENS_TEST_PUBLIC_IP explicitly.
+        public_ip = req("SPIRENS_TEST_IP")
+
     return TestEnv(
         host=req("SPIRENS_TEST_HOST"),
         ip=req("SPIRENS_TEST_IP"),
@@ -64,4 +84,6 @@ def load() -> TestEnv:
         eth_local_url=raw.get("SPIRENS_TEST_ETH_LOCAL_URL", ""),
         cf_api_email=req("CF_API_EMAIL"),
         cf_dns_api_token=req("CF_DNS_API_TOKEN"),
+        profile=profile,
+        public_ip=public_ip,
     )

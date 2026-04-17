@@ -26,6 +26,11 @@ def _health_once(ctx: Context) -> list[dict[str, object]]:
     # The health command also auto-flips insecure when ACME_CA_SERVER
     # mentions 'staging', but passing it explicitly makes the phase
     # tolerant of either prod or staging configurations.
+    #
+    # Profile note: on public profile `spirens health` reads
+    # DEPLOYMENT_PROFILE=public from .env and uses real DNS (no --host
+    # override). On internal it defaults --host to 127.0.0.1. Either way,
+    # same command — the profile-aware behavior lives in SPIRENS itself.
     r = ssh_run(
         ctx.env,
         [

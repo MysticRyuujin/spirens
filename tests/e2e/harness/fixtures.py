@@ -21,5 +21,6 @@ def render(profile: str, env: TestEnv) -> str:
         "CF_API_EMAIL": env.cf_api_email,
         "CF_DNS_API_TOKEN": env.cf_dns_api_token,
         "ETH_LOCAL_URL": env.eth_local_url,
+        "PUBLIC_IP": env.public_ip,
     }
     return Template(path.read_text()).substitute(values)

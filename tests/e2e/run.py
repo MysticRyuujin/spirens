@@ -49,6 +49,15 @@ def main() -> int:
         action="store_true",
         help="continue on phase failure (cleanups still run at the end)",
     )
+    ap.add_argument(
+        "--profile",
+        choices=("internal", "public"),
+        default=None,
+        help=(
+            "Override SPIRENS_TEST_PROFILE from .env.test. Public-profile "
+            "phases (10, 11, 12, 13) are skipped on internal."
+        ),
+    )
     args = ap.parse_args()
 
     phases = list_phases()
@@ -68,7 +77,9 @@ def main() -> int:
         ap.error("no phase selected")
 
     env = load_env()
-    ctx = Context(env=env)
+    profile = args.profile or env.profile
+    ctx = Context(env=env, profile=profile)
+    print(f"profile: {profile}")
     first_failure: Exception | None = None
     try:
         for name in selection:
