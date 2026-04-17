@@ -234,7 +234,7 @@ Common failure modes:
   cache serving cross-block data. First step: check eRPC logs.
 - **Stuck consensus** — Helios' consensus client falls behind and
   stops updating. Usually self-recovers; if not, `docker restart
-  spirens-helios`.
+spirens-helios`.
 
 If Helios itself is down, dweb-proxy will fail ENS resolution — it
 doesn't fall back to eRPC automatically. To disable Helios temporarily

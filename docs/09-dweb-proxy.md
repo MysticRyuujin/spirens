@@ -151,7 +151,7 @@ To rotate the password: blank `REDIS_PASSWORD=` in `.env`, re-run
 ## Trustless resolution via Helios (opt-in)
 
 dweb-proxy reads ENS state from a plain Ethereum RPC, which by default is
-the internal eRPC endpoint. eRPC does the right thing for rpc.* traffic
+the internal eRPC endpoint. eRPC does the right thing for rpc.\* traffic
 (caching, failover, rate limiting) but it doesn't _verify_ that the data
 a vendor returned actually matches the state the Ethereum contract
 holds — it trusts the upstream.

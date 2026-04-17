@@ -100,8 +100,8 @@ Key decisions:
 command:
   - ethereum
   - --network=mainnet
-  - --execution-rpc=${HELIOS_EXECUTION_RPC}   # your proof source
-  - --checkpoint=${HELIOS_CHECKPOINT}         # weak-subjectivity anchor
+  - --execution-rpc=${HELIOS_EXECUTION_RPC} # your proof source
+  - --checkpoint=${HELIOS_CHECKPOINT} # weak-subjectivity anchor
   - --rpc-bind-ip=0.0.0.0
   - --rpc-port=8545
 ```

@@ -35,11 +35,11 @@ Three environments are first-class targets:
 SPIRENS works in three deployment models. Decide which fits your setup
 before reading further — it changes which sections apply to you.
 
-| If your setup looks like…                                                     | Use profile  |
-| :---------------------------------------------------------------------------- | :----------- |
-| A box on your home/office LAN, no public access needed                        | **Internal** |
-| A VPS or dedicated server with a public IP, serving the internet             | **Public**   |
-| Behind CGNAT, strict firewall, or you don't want inbound ports forwarded      | **Tunnel**   |
+| If your setup looks like…                                                | Use profile  |
+| :----------------------------------------------------------------------- | :----------- |
+| A box on your home/office LAN, no public access needed                   | **Internal** |
+| A VPS or dedicated server with a public IP, serving the internet         | **Public**   |
+| Behind CGNAT, strict firewall, or you don't want inbound ports forwarded | **Tunnel**   |
 
 All three use the same services and configs — only the DNS and network
 wiring differ. See [Deployment Profiles](04-deployment-profiles.md) for
@@ -47,10 +47,10 @@ the full breakdown and per-tool setup guides.
 
 You'll also pick a **topology** (how Docker orchestrates the containers):
 
-| If you have…                                                | Use topology    |
-| :---------------------------------------------------------- | :-------------- |
-| One host, simpler is better                                 | **single-host** |
-| Multiple hosts, want HA ingress or shared state             | **swarm**       |
+| If you have…                                    | Use topology    |
+| :---------------------------------------------- | :-------------- |
+| One host, simpler is better                     | **single-host** |
+| Multiple hosts, want HA ingress or shared state | **swarm**       |
 
 Topology and profile are independent. A public deployment on a single VPS
 is _public + single-host_. A home lab across three Raspberry Pis is

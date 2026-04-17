@@ -23,13 +23,13 @@ For a stable deployment:
 
 1. Record the tags you want in `.env`:
 
-    ```ini
-    TRAEFIK_IMAGE=traefik:v3.3.2
-    ERPC_IMAGE=ghcr.io/erpc/erpc:v0.0.42
-    KUBO_IMAGE=ipfs/kubo:v0.32.1
-    DWEB_PROXY_IMAGE=ghcr.io/ethlimo/dweb-proxy-api:sha-abc1234
-    REDIS_IMAGE=redis:7.4-alpine
-    ```
+   ```ini
+   TRAEFIK_IMAGE=traefik:v3.3.2
+   ERPC_IMAGE=ghcr.io/erpc/erpc:v0.0.42
+   KUBO_IMAGE=ipfs/kubo:v0.32.1
+   DWEB_PROXY_IMAGE=ghcr.io/ethlimo/dweb-proxy-api:sha-abc1234
+   REDIS_IMAGE=redis:7.4-alpine
+   ```
 
 2. Reference the vars in the compose files (replace the hardcoded
    `image:` line). Docker Compose substitutes from `.env` at run time.
@@ -93,10 +93,10 @@ Before bringing services up, check two things:
 2. **Your `.env`** against `.env.example`. A `diff` between them shows
    any new settings you need to add:
 
-    ```bash
-    diff <(grep -o '^[A-Z_]*=' .env.example | sort) \
-         <(grep -o '^[A-Z_]*=' .env | sort)
-    ```
+   ```bash
+   diff <(grep -o '^[A-Z_]*=' .env.example | sort) \
+        <(grep -o '^[A-Z_]*=' .env | sort)
+   ```
 
 Then:
 
@@ -117,12 +117,12 @@ spirens configure-ipfs
 Named volumes survive `spirens down` / `docker compose down`. The
 important ones:
 
-| Volume                  | What it holds                            | Safe to delete?                                                 |
-| :---------------------- | :--------------------------------------- | :-------------------------------------------------------------- |
-| `letsencrypt`           | ACME account key + issued certs          | Only if you're OK re-issuing (watch LE rate limits)             |
-| `ipfs_data`             | IPFS blocks, pins, peer identity         | **No** — loses your peer reputation and any content you pinned  |
-| `traefik_acme` (if any) | Fallback store for LE artifacts          | Same as `letsencrypt`                                           |
-| `redis_data`            | Redis AOF / RDB                          | Yes — caches only, no durable state                             |
+| Volume                  | What it holds                    | Safe to delete?                                                |
+| :---------------------- | :------------------------------- | :------------------------------------------------------------- |
+| `letsencrypt`           | ACME account key + issued certs  | Only if you're OK re-issuing (watch LE rate limits)            |
+| `ipfs_data`             | IPFS blocks, pins, peer identity | **No** — loses your peer reputation and any content you pinned |
+| `traefik_acme` (if any) | Fallback store for LE artifacts  | Same as `letsencrypt`                                          |
+| `redis_data`            | Redis AOF / RDB                  | Yes — caches only, no durable state                            |
 
 `spirens down single --volumes` nukes all of them. It's the right move
 only when you're intentionally resetting.
@@ -201,7 +201,7 @@ again on the next restart.
 Three things are worth snapshotting before a non-trivial upgrade:
 
 1. **`.env` and `secrets/`** — copy off the host. (`tar czf
-   spirens-config-$(date +%F).tgz .env secrets/` is fine.)
+spirens-config-$(date +%F).tgz .env secrets/` is fine.)
 2. **`letsencrypt/acme.json`** — same treatment, separately.
 3. **IPFS pin list** — `docker exec spirens-ipfs ipfs pin ls > pins-$(date +%F).txt`.
 

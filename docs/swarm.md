@@ -32,19 +32,19 @@ API surface is close to compose but differs in a few important ways.
 
 ## What changes vs single-host
 
-| Concern              | Single-host                              | Swarm                                                 |
-| :------------------- | :--------------------------------------- | :---------------------------------------------------- |
-| Entry point          | `docker compose -f compose.yml up -d`    | `docker stack deploy -c stack.*.yml <stack-name>`     |
-| Deploy granularity   | One `compose.yml` includes all modules   | One `stack.*.yml` per service; deploy each separately |
-| Traefik provider     | `providers.docker`                       | `providers.swarm`                                     |
-| Service labels       | `traefik.docker.network=…`               | `traefik.swarm.network=…`                             |
-| Secrets              | File-backed (`secrets: - file: …`)       | `external: true` via `docker secret create`           |
-| Configs              | Volume-mounted files                     | Usually `docker config create` + `external: true`     |
-| Updates              | `spirens up single [-s service]`         | `docker service update` or `stack deploy` again       |
-| Scale                | One replica per service by design        | `docker service scale foo=N`                          |
-| Volumes              | Local named volumes                      | Swap in NFS driver for shared state                   |
-| Placement            | n/a                                      | `deploy.placement.constraints` / `preferences`        |
-| Networks             | Bridge (`external: true`)                | Overlay (`external: true`, `attachable: true`)        |
+| Concern            | Single-host                            | Swarm                                                 |
+| :----------------- | :------------------------------------- | :---------------------------------------------------- |
+| Entry point        | `docker compose -f compose.yml up -d`  | `docker stack deploy -c stack.*.yml <stack-name>`     |
+| Deploy granularity | One `compose.yml` includes all modules | One `stack.*.yml` per service; deploy each separately |
+| Traefik provider   | `providers.docker`                     | `providers.swarm`                                     |
+| Service labels     | `traefik.docker.network=…`             | `traefik.swarm.network=…`                             |
+| Secrets            | File-backed (`secrets: - file: …`)     | `external: true` via `docker secret create`           |
+| Configs            | Volume-mounted files                   | Usually `docker config create` + `external: true`     |
+| Updates            | `spirens up single [-s service]`       | `docker service update` or `stack deploy` again       |
+| Scale              | One replica per service by design      | `docker service scale foo=N`                          |
+| Volumes            | Local named volumes                    | Swap in NFS driver for shared state                   |
+| Placement          | n/a                                    | `deploy.placement.constraints` / `preferences`        |
+| Networks           | Bridge (`external: true`)              | Overlay (`external: true`, `attachable: true`)        |
 
 ## Bringing it up
 
@@ -154,7 +154,7 @@ services:
       update_config:
         parallelism: 2
         delay: 10s
-        order: start-first   # zero-downtime; start new before stopping old
+        order: start-first # zero-downtime; start new before stopping old
       rollback_config:
         parallelism: 1
         delay: 5s
@@ -208,9 +208,9 @@ unchanged. What differs is the network plumbing:
 
 | Profile      | Works on Swarm? | Notes                                                               |
 | :----------- | :-------------: | :------------------------------------------------------------------ |
-| **Internal** |       ✓         | Same story — local DNS points at the cluster VIP or any node's IP   |
-| **Public**   |       ✓         | Cloudflare A records can point at any node; routing mesh handles it |
-| **Tunnel**   |       ✓         | Cloudflared runs on one node; mesh routes to services regardless    |
+| **Internal** |        ✓        | Same story — local DNS points at the cluster VIP or any node's IP   |
+| **Public**   |        ✓        | Cloudflare A records can point at any node; routing mesh handles it |
+| **Tunnel**   |        ✓        | Cloudflared runs on one node; mesh routes to services regardless    |
 
 The routing mesh is Swarm's killer feature here: a client hitting port
 443 on _any_ node gets routed to whichever node is running Traefik.

@@ -89,17 +89,17 @@ This is how `ipfs resolve /ipns/vitalik.eth` works from inside your Kubo node.
 Before going further, understand that SPIRENS asks you to make **two
 independent** decisions. Don't conflate them.
 
-| Axis         | Options                                   | What it controls                                              |
-| :----------- | :---------------------------------------- | :------------------------------------------------------------ |
-| **Topology** | `single-host` or `swarm`                  | How Docker orchestrates the containers                        |
-| **Profile**  | `internal`, `public`, or `tunnel`         | Where your DNS A records live and how external clients reach you |
+| Axis         | Options                           | What it controls                                                 |
+| :----------- | :-------------------------------- | :--------------------------------------------------------------- |
+| **Topology** | `single-host` or `swarm`          | How Docker orchestrates the containers                           |
+| **Profile**  | `internal`, `public`, or `tunnel` | Where your DNS A records live and how external clients reach you |
 
 Any combination is valid. Some examples:
 
-|                     | Internal profile                       | Public profile                      | Tunnel profile                       |
-| :------------------ | :------------------------------------- | :---------------------------------- | :----------------------------------- |
-| **Single-host**     | Home NAS on LAN, one box                | Cheap VPS serving public endpoints  | Home lab behind CGNAT, cloudflared  |
-| **Swarm**           | Home lab across 3 Pis, LAN-only         | Two-node cluster with HA ingress    | Swarm cluster behind Tailscale Funnel |
+|                 | Internal profile                | Public profile                     | Tunnel profile                        |
+| :-------------- | :------------------------------ | :--------------------------------- | :------------------------------------ |
+| **Single-host** | Home NAS on LAN, one box        | Cheap VPS serving public endpoints | Home lab behind CGNAT, cloudflared    |
+| **Swarm**       | Home lab across 3 Pis, LAN-only | Two-node cluster with HA ingress   | Swarm cluster behind Tailscale Funnel |
 
 The full breakdown is in
 [04 — Deployment Profiles](04-deployment-profiles.md). The single-host vs

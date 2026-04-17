@@ -22,15 +22,15 @@ initial set; `spirens bootstrap` regenerates the ones that are missing.
 
 ### What lives where
 
-| Item                            | Location                              | Rotation                                                    |
-| :------------------------------ | :------------------------------------ | :---------------------------------------------------------- |
-| `CF_DNS_API_TOKEN`              | `.env`, mounted as `secrets/cf_api_token` | Regenerate at Cloudflare, paste into `.env`, restart stack  |
-| Traefik dashboard password      | `secrets/traefik_dashboard_htpasswd`  | Re-run `spirens gen-htpasswd`                               |
-| `REDIS_PASSWORD`                | `.env`                                | Blank the var, re-run `spirens bootstrap`, restart Redis + dweb-proxy |
-| Vendor RPC API keys             | `.env`                                | Regenerate at vendor, paste, restart eRPC                   |
-| LE account key / certs          | `letsencrypt/acme.json` (mode 0600)   | Delete file to force fresh LE account on next boot          |
-| Kubo node identity              | IPFS volume (`peerid`)                | Delete IPFS volume — irreversible, loses peer reputation    |
-| Cloudflare Origin Cert key      | `secrets/cf_origin.key` (if used)     | Regenerate at Cloudflare, rotate manually                   |
+| Item                       | Location                                  | Rotation                                                              |
+| :------------------------- | :---------------------------------------- | :-------------------------------------------------------------------- |
+| `CF_DNS_API_TOKEN`         | `.env`, mounted as `secrets/cf_api_token` | Regenerate at Cloudflare, paste into `.env`, restart stack            |
+| Traefik dashboard password | `secrets/traefik_dashboard_htpasswd`      | Re-run `spirens gen-htpasswd`                                         |
+| `REDIS_PASSWORD`           | `.env`                                    | Blank the var, re-run `spirens bootstrap`, restart Redis + dweb-proxy |
+| Vendor RPC API keys        | `.env`                                    | Regenerate at vendor, paste, restart eRPC                             |
+| LE account key / certs     | `letsencrypt/acme.json` (mode 0600)       | Delete file to force fresh LE account on next boot                    |
+| Kubo node identity         | IPFS volume (`peerid`)                    | Delete IPFS volume — irreversible, loses peer reputation              |
+| Cloudflare Origin Cert key | `secrets/cf_origin.key` (if used)         | Regenerate at Cloudflare, rotate manually                             |
 
 ### Redacting for support
 
@@ -184,14 +184,14 @@ need public access.
 
 A reasonable calendar for a production-ish deployment:
 
-| Asset                    | Rotate every | Trigger                                       |
-| :----------------------- | :----------- | :-------------------------------------------- |
-| Dashboard password       | 6 months     | Any operator change, or suspicion             |
-| Cloudflare API token     | 12 months    | Or when scope needs change                    |
-| `REDIS_PASSWORD`         | 12 months    | Or after a compromise                         |
-| Vendor RPC keys          | 12 months    | Or at key renewal time                        |
-| LE certs                 | Automatic    | 30 days before expiry, via Traefik            |
-| CF Origin Cert (if used) | 15 years     | Manual; set a calendar reminder               |
+| Asset                    | Rotate every | Trigger                            |
+| :----------------------- | :----------- | :--------------------------------- |
+| Dashboard password       | 6 months     | Any operator change, or suspicion  |
+| Cloudflare API token     | 12 months    | Or when scope needs change         |
+| `REDIS_PASSWORD`         | 12 months    | Or after a compromise              |
+| Vendor RPC keys          | 12 months    | Or at key renewal time             |
+| LE certs                 | Automatic    | 30 days before expiry, via Traefik |
+| CF Origin Cert (if used) | 15 years     | Manual; set a calendar reminder    |
 
 ## What SPIRENS does _not_ do
 
