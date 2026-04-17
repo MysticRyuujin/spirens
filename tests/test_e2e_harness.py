@@ -19,8 +19,8 @@ from tests.e2e.harness.phases import (
 )
 
 
-def _env(**overrides: str) -> TestEnv:
-    base = {
+def _env(**overrides) -> TestEnv:
+    base: dict[str, object] = {
         "host": "test01.example.com",
         "ip": "192.0.2.10",
         "user": "root",
@@ -32,6 +32,7 @@ def _env(**overrides: str) -> TestEnv:
         "profile": "internal",
         "public_ip": "",
         "remote_repo": "/root/spirens",
+        "allow_le_prod": False,
     }
     base.update(overrides)
     return TestEnv(**base)  # type: ignore[arg-type]
@@ -244,3 +245,98 @@ class TestRemoteRepoDerivation:
             ),
         )
         assert env.remote_repo == "/home/azureuser/spirens"
+
+
+class TestLeProdSafeguard:
+    """render() must not emit a .env that would hit LE prod unless the
+    operator explicitly opts in via SPIRENS_TEST_ALLOW_LE_PROD."""
+
+    def test_staging_fixture_renders(self, tmp_path, monkeypatch) -> None:
+        from tests.e2e.harness import fixtures
+
+        fixture_dir = tmp_path / "fixtures"
+        fixture_dir.mkdir()
+        (fixture_dir / "env_internal.template").write_text(
+            "ACME_CA_SERVER=https://acme-staging-v02.api.letsencrypt.org/directory\n"
+        )
+        monkeypatch.setattr(fixtures, "FIXTURES", fixture_dir)
+        rendered = fixtures.render("internal", _env())
+        assert "acme-staging" in rendered
+
+    def test_prod_fixture_raises(self, tmp_path, monkeypatch) -> None:
+        from tests.e2e.harness import fixtures
+
+        fixture_dir = tmp_path / "fixtures"
+        fixture_dir.mkdir()
+        (fixture_dir / "env_internal.template").write_text(
+            "ACME_CA_SERVER=https://acme-v02.api.letsencrypt.org/directory\n"
+        )
+        monkeypatch.setattr(fixtures, "FIXTURES", fixture_dir)
+        with pytest.raises(fixtures.LeProdSafeguardError, match="staging"):
+            fixtures.render("internal", _env())
+
+    def test_prod_fixture_with_opt_in_renders(self, tmp_path, monkeypatch) -> None:
+        from tests.e2e.harness import fixtures
+
+        fixture_dir = tmp_path / "fixtures"
+        fixture_dir.mkdir()
+        (fixture_dir / "env_internal.template").write_text(
+            "ACME_CA_SERVER=https://acme-v02.api.letsencrypt.org/directory\n"
+        )
+        monkeypatch.setattr(fixtures, "FIXTURES", fixture_dir)
+        rendered = fixtures.render("internal", _env(allow_le_prod=True))
+        assert "acme-v02" in rendered
+
+    def test_missing_acme_ca_server_raises(self, tmp_path, monkeypatch) -> None:
+        from tests.e2e.harness import fixtures
+
+        fixture_dir = tmp_path / "fixtures"
+        fixture_dir.mkdir()
+        # Fixture without ACME_CA_SERVER — compose would fall back to
+        # LE prod via its ${ACME_CA_SERVER:-https://acme-v02...} default.
+        (fixture_dir / "env_internal.template").write_text("BASE_DOMAIN=x\n")
+        monkeypatch.setattr(fixtures, "FIXTURES", fixture_dir)
+        with pytest.raises(fixtures.LeProdSafeguardError, match="no ACME_CA_SERVER"):
+            fixtures.render("internal", _env())
+
+    def test_empty_acme_ca_server_raises(self, tmp_path, monkeypatch) -> None:
+        from tests.e2e.harness import fixtures
+
+        fixture_dir = tmp_path / "fixtures"
+        fixture_dir.mkdir()
+        # Key present but empty — same effect as missing at compose
+        # interpolation time.
+        (fixture_dir / "env_internal.template").write_text("ACME_CA_SERVER=\n")
+        monkeypatch.setattr(fixtures, "FIXTURES", fixture_dir)
+        with pytest.raises(fixtures.LeProdSafeguardError, match="no ACME_CA_SERVER"):
+            fixtures.render("internal", _env())
+
+    def test_allow_le_prod_env_var_parsing(self, tmp_path, monkeypatch) -> None:
+        """Verify SPIRENS_TEST_ALLOW_LE_PROD parses truthy values correctly."""
+        from tests.e2e.harness import env as env_mod
+
+        for value, expected in [
+            ("1", True),
+            ("true", True),
+            ("True", True),
+            ("yes", True),
+            ("on", True),
+            ("0", False),
+            ("false", False),
+            ("", False),
+            ("no", False),
+            ("random", False),
+        ]:
+            envfile = tmp_path / f".env.test.{value or 'empty'}"
+            envfile.write_text(
+                "SPIRENS_TEST_HOST=x\n"
+                "SPIRENS_TEST_IP=1.2.3.4\n"
+                "SPIRENS_TEST_DOMAIN=example.com\n"
+                "SPIRENS_TEST_ACME_EMAIL=a@example.com\n"
+                "CF_API_EMAIL=a@example.com\n"
+                "CF_DNS_API_TOKEN=tok\n"
+                f"SPIRENS_TEST_ALLOW_LE_PROD={value}\n"
+            )
+            monkeypatch.setattr(env_mod, "ENV_FILE", envfile)
+            env = env_mod.load()
+            assert env.allow_le_prod is expected, f"{value!r} → expected {expected}"

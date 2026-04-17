@@ -34,6 +34,7 @@ class TestEnv:
     public_ip: str  # IP public DNS A records should point at; empty for internal
     remote_repo: str  # path on the VM where rsync lands; /root/spirens for root,
     # /home/<user>/spirens otherwise (overridable via SPIRENS_TEST_REMOTE_REPO)
+    allow_le_prod: bool  # opt-in: let fixtures render with LE prod CA (default False)
 
     @property
     def sudo(self) -> bool:
@@ -98,6 +99,9 @@ def load() -> TestEnv:
         # must set SPIRENS_TEST_PUBLIC_IP explicitly.
         public_ip = req("SPIRENS_TEST_IP")
 
+    allow_le_prod_raw = raw.get("SPIRENS_TEST_ALLOW_LE_PROD", "").strip().lower()
+    allow_le_prod = allow_le_prod_raw in ("1", "true", "yes", "on")
+
     return TestEnv(
         host=req("SPIRENS_TEST_HOST"),
         ip=req("SPIRENS_TEST_IP"),
@@ -110,4 +114,5 @@ def load() -> TestEnv:
         profile=profile,
         public_ip=public_ip,
         remote_repo=remote_repo,
+        allow_le_prod=allow_le_prod,
     )
