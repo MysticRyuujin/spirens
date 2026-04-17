@@ -52,7 +52,7 @@ only use Cloudflare for the ACME challenge API.
 ## DNS records
 
 Assuming `BASE_DOMAIN=example.com`. This list lives in
-[`config/dns/records.yaml`](../config/dns/records.yaml) — the optional
+[`config/dns/records.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/dns/records.yaml) — the optional
 `dns-sync` module can reconcile it to Cloudflare for you.
 
 | Type | Name           | Visibility | Proxy | Purpose                                                   |
@@ -298,7 +298,7 @@ include:
   - optional/compose.dns-sync.yml
 ```
 
-It reads [`config/dns/records.yaml`](../config/dns/records.yaml), looks up
+It reads [`config/dns/records.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/dns/records.yaml), looks up
 your current public IP (`PUBLIC_IP=auto` in `.env`), and reconciles:
 
 - **creates** records that don't exist yet

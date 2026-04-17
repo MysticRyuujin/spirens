@@ -45,9 +45,9 @@ fully-working alternative.
 
 Everything you need lives in:
 
-- [`config/traefik/traefik.yml`](../config/traefik/traefik.yml) — declares the
+- [`config/traefik/traefik.yml`](https://github.com/MysticRyuujin/spirens/blob/main/config/traefik/traefik.yml) — declares the
   `le` resolver with `dnsChallenge.provider=cloudflare`.
-- [`compose/single-host/compose.traefik.yml`](../compose/single-host/compose.traefik.yml)
+- [`compose/single-host/compose.traefik.yml`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/compose.traefik.yml)
   (or `stack.traefik.yml` for swarm) — passes `CF_DNS_API_TOKEN_FILE` and
   `CF_API_EMAIL` in, mounts the `letsencrypt` volume.
 - Each service (eRPC, IPFS, dweb-proxy) sets

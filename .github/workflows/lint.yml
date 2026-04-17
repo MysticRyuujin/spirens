@@ -56,6 +56,24 @@ jobs:
       - name: Type check
         run: mypy src/spirens/
 
+  # ─── mkdocs strict build ───────────────────────────────────────────────────
+  # Catches broken links, missing pages, malformed front-matter, etc. Strict
+  # mode escalates warnings to errors so doc rot fails CI instead of going
+  # unnoticed until someone notices the deployed site looks off.
+  docs:
+    name: mkdocs --strict
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install docs deps
+        run: pip install -e ".[docs]"
+      - name: Build docs with --strict
+        run: mkdocs build --strict
+
   # ─── Compose validation (single-host + swarm) ──────────────────────────────
   compose-validate:
     name: compose config

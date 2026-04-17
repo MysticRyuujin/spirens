@@ -89,7 +89,7 @@ SNS is supported too), both mappings go in one JSON blob that's then
 base64-encoded and passed as `LIMO_HOSTNAME_SUBSTITUTION_CONFIG`.
 
 Source of truth:
-[`config/dweb-proxy/hostname-map.json`](../config/dweb-proxy/hostname-map.json).
+[`config/dweb-proxy/hostname-map.json`](https://github.com/MysticRyuujin/spirens/blob/main/config/dweb-proxy/hostname-map.json).
 
 ```json
 {

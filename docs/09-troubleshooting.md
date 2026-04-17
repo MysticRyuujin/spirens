@@ -182,7 +182,7 @@ DHT chatter. For heavier hosting, read
 upstream — only Ethereum mainnet is enabled by default.
 
 **Fix.** Uncomment a vendor block for chainId 8453 in
-[`config/erpc/erpc.yaml`](../config/erpc/erpc.yaml) and set the matching
+[`config/erpc/erpc.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/erpc/erpc.yaml) and set the matching
 API key. Restart: `spirens up single -s erpc`.
 
 ---

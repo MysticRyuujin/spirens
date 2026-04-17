@@ -61,7 +61,7 @@ pick a minority client on _both_ layers. For a read-only node (what SPIRENS
 cares about), pick whichever has docs you like.
 
 SPIRENS ships a **Geth + Lighthouse** reference at
-[`compose/single-host/optional/compose.ethereum.yml.example`](../compose/single-host/optional/compose.ethereum.yml.example)
+[`compose/single-host/optional/compose.ethereum.yml.example`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/optional/compose.ethereum.yml.example)
 because both are well-documented, well-maintained, and what most runbooks
 online assume.
 
@@ -145,7 +145,7 @@ That's also OK — you'll rely entirely on vendor providers. In that case:
 
 1. Leave `ETH_LOCAL_URL=` empty in `.env`.
 2. Uncomment one or more of the vendor upstream blocks in
-   [`config/erpc/erpc.yaml`](../config/erpc/erpc.yaml).
+   [`config/erpc/erpc.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/erpc/erpc.yaml).
 3. Put the matching API keys in `.env`.
 
 The stack works perfectly well this way — you just lose the sovereignty

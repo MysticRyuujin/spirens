@@ -27,7 +27,7 @@ budget story across multiple vendors. Still useful.
 
 ## The MVP config, explained
 
-[`config/erpc/erpc.yaml`](../config/erpc/erpc.yaml) is ~100 lines. Here's
+[`config/erpc/erpc.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/erpc/erpc.yaml) is ~100 lines. Here's
 what each section does:
 
 ### `rateLimiters.budgets`

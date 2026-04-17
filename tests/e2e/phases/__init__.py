@@ -22,5 +22,6 @@ from tests.e2e.phases import (  # noqa: F401
     p18_up_swarm,
     p19_swarm_health,
     p20_down_swarm,
+    p21_failure_modes,
     p99_cleanup,
 )

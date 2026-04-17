@@ -43,7 +43,7 @@ it to whatever container in this compose is publishing port 8545."
 
 ## Middleware, once
 
-Middleware goes in [`config/traefik/dynamic.yml`](../config/traefik/dynamic.yml).
+Middleware goes in [`config/traefik/dynamic.yml`](https://github.com/MysticRyuujin/spirens/blob/main/config/traefik/dynamic.yml).
 It's watched — edits take effect without restart. SPIRENS defines four
 reusable middlewares:
 
@@ -88,7 +88,7 @@ on-LAN _and_ know the password.
 - **`letsencrypt/acme.json` must be mode 0600.** Traefik refuses to start
   otherwise. `spirens bootstrap` enforces this.
 - **Wildcards go in `tls.domains`**, not in the `Host()` rule. See the dweb-proxy
-  router in [`compose/single-host/compose.dweb-proxy.yml`](../compose/single-host/compose.dweb-proxy.yml)
+  router in [`compose/single-host/compose.dweb-proxy.yml`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/compose.dweb-proxy.yml)
   for the pattern.
 - **LE staging for testing** — add
   `--certificatesResolvers.le.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory`
@@ -116,7 +116,7 @@ If you want to expose another service through Traefik:
      - "traefik.http.services.myapp.loadbalancer.server.port=<internal-port>"
    ```
 
-3. Add `myapp` to [`config/dns/records.yaml`](../config/dns/records.yaml) so
+3. Add `myapp` to [`config/dns/records.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/dns/records.yaml) so
    DNS stays in sync.
 
 Continue → [05 — Ethereum node](05-ethereum-node.md)

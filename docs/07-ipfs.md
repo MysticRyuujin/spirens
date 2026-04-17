@@ -80,7 +80,7 @@ All four are set up by SPIRENS out of the box:
 - TLS: see the `tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}` entry
   (CID subdomain) and the parallel `tls.domains[0].sans=*.ipns.${BASE_DOMAIN}`
   entry (IPNS subdomain) in
-  [`compose/single-host/compose.ipfs.yml`](../compose/single-host/compose.ipfs.yml).
+  [`compose/single-host/compose.ipfs.yml`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/compose.ipfs.yml).
   Two separate wildcard-cert requests; Traefik issues both at first boot.
 
 ## Post-deploy configuration
