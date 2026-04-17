@@ -44,3 +44,4 @@ of paraphrasing. The goal is to be the best on-ramp, not the endgame.
 - [Architecture overview](00-overview.md) — understand how the pieces fit together
 - [Prerequisites](01-prerequisites.md) — what you need before starting
 - [CLI reference](cli.md) — every command at a glance
+- [Claude Code skills](skills.md) — the `spirens-skills` plugin for AI pairing

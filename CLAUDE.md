@@ -102,6 +102,28 @@ Config files:
 If you add a new file type, add the matching hook AND mirror it in CI so the
 two never drift.
 
+## Claude Code skills plugin
+
+`.claude-plugin/` plus the per-skill directories (`ship/`, `dns/`,
+`cloudflare/`, `tls-acme/`, `lets-encrypt/`, `ipfs/`, `gateways/`,
+`ipns/`, `ens-resolution/`, `traefik/`, `nginx/`, `caddy/`, `erpc/`,
+`topology/`) at the repo root ship the `spirens-skills` Claude Code
+plugin. Each skill is `<name>/SKILL.md` with YAML frontmatter whose
+`description` is a **trigger** ("use when the user asks X"), not a
+summary.
+
+Contributor rules:
+
+- **Skills link into `docs/`, they don't duplicate it.** If you update
+  a long-form doc, check the matching skill's link targets still
+  resolve.
+- **Keep skills short (150–300 lines).** Long-form goes in `docs/`.
+- **Open every skill with "What You Probably Got Wrong."** Skills
+  exist to correct LLM blind spots — lead with the correction.
+- **When you add a new skill:** register it in
+  `.claude-plugin/plugin.json`'s `skills` array and in the top-level
+  `SKILL.md` TOC and the `docs/skills.md` page.
+
 ## Documentation
 
 Docs are built with [mkdocs-material](https://squidfunk.github.io/mkdocs-material/)

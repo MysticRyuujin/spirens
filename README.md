@@ -89,6 +89,28 @@ version.
 
 ---
 
+## Claude Code plugin (`spirens-skills`)
+
+SPIRENS ships a [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
+plugin so an AI pair can help you deploy this stack (or one like it) on
+your own infra. Install from inside a Claude Code session:
+
+```text
+/plugin marketplace add MysticRyuujin/spirens
+/plugin install spirens-skills
+```
+
+The plugin ships 13 skills covering IPFS, IPNS, gateways, ENS resolution,
+TLS/ACME, DNS/Cloudflare, Traefik, nginx, Caddy, eRPC, and single-host vs
+Swarm topology. See [`SKILL.md`](SKILL.md) for the full table of contents,
+or the `docs/skills.md` page on the built site.
+
+Modeled on [`ethskills`](https://github.com/austintgriffith/ethskills) —
+ethskills covers Ethereum itself; these cover the infra that makes a
+decentralized-web deployment actually serve traffic.
+
+---
+
 ## CLI reference
 
 ```bash

@@ -1,0 +1,44 @@
+{
+  "name": "spirens-skills",
+  "version": "0.1.0",
+  "description": "Decentralized-web infra skills — corrects LLM blind spots on IPFS, IPNS, gateways, ENS resolution, TLS/ACME, DNS/Cloudflare, Traefik, nginx, Caddy, eRPC, and single-host vs Swarm topology.",
+  "author": {
+    "name": "SPIRENS contributors",
+    "url": "https://github.com/MysticRyuujin/spirens"
+  },
+  "homepage": "https://mysticryuujin.github.io/spirens/",
+  "repository": "https://github.com/MysticRyuujin/spirens",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "ipfs",
+    "ipns",
+    "ens",
+    "traefik",
+    "nginx",
+    "caddy",
+    "tls",
+    "acme",
+    "lets-encrypt",
+    "dns",
+    "cloudflare",
+    "erpc",
+    "web3",
+    "dweb"
+  ],
+  "skills": [
+    "./ship",
+    "./dns",
+    "./cloudflare",
+    "./tls-acme",
+    "./lets-encrypt",
+    "./ipfs",
+    "./gateways",
+    "./ipns",
+    "./ens-resolution",
+    "./traefik",
+    "./nginx",
+    "./caddy",
+    "./erpc",
+    "./topology"
+  ]
+}

@@ -49,6 +49,7 @@ nav:
       - dweb-proxy: 08-dweb-proxy.md
   - CLI Reference: cli.md
   - Troubleshooting: 09-troubleshooting.md
+  - Claude Code skills: skills.md
 
 validation:
   links:
