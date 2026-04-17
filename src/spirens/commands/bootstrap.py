@@ -101,7 +101,10 @@ def bootstrap(
             "traefik_dashboard_htpasswd",
             str(repo_root / "secrets" / "traefik_dashboard_htpasswd"),
         )
-        ensure_config(runner, "spirens_traefik_yml", str(repo_root / "config/traefik/traefik.yml"))
+        # traefik.yml was removed when we moved Traefik's static config to
+        # CLI args (Traefik 3 silently ignores CLI providers when a file
+        # is mounted). Only the dynamic middleware file still ships as a
+        # swarm config.
         ensure_config(
             runner, "spirens_traefik_dynamic", str(repo_root / "config/traefik/dynamic.yml")
         )

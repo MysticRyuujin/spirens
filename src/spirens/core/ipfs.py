@@ -131,18 +131,37 @@ class KuboClient:
             log("DWEB_RESOLVER_HOST empty — skipping .eth DNS.Resolvers")
 
     def restart_container(self, *, runner: CommandRunner, no_restart: bool = False) -> None:
-        """Restart the IPFS container to apply config changes."""
+        """Restart the IPFS container (or swarm task) to apply config.
+
+        Tries, in order:
+          1. ``docker restart spirens-ipfs`` — single-host compose name.
+          2. ``docker service update --force spirens-ipfs_ipfs`` — swarm
+             forces a rolling task replacement, the swarm equivalent of a
+             container restart.
+        Logs and returns cleanly if neither exists (e.g. dry-run or
+        stack not up yet).
+        """
         if no_restart:
             log("--no-restart: skipping container restart (settings apply after next restart)")
             return
 
         log("restarting Kubo to apply")
-        result = subprocess.run(
+        single = subprocess.run(
             ["docker", "inspect", "spirens-ipfs"],
             capture_output=True,
             text=True,
         )
-        if result.returncode == 0:
+        if single.returncode == 0:
             runner.run(["docker", "restart", "spirens-ipfs"])
-        else:
-            log("container 'spirens-ipfs' not found — restart manually")
+            return
+
+        swarm = subprocess.run(
+            ["docker", "service", "inspect", "spirens-ipfs_ipfs"],
+            capture_output=True,
+            text=True,
+        )
+        if swarm.returncode == 0:
+            runner.run(["docker", "service", "update", "--force", "spirens-ipfs_ipfs"])
+            return
+
+        log("container 'spirens-ipfs' / service 'spirens-ipfs_ipfs' not found — restart manually")

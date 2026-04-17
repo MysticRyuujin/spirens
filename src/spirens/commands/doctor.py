@@ -35,6 +35,28 @@ def _version_tuple(version_str: str) -> tuple[int, ...]:
     return tuple(int(n) for n in nums[:3])
 
 
+def _check_docker_live_restore() -> tuple[bool, str]:
+    """True when live-restore is on in /etc/docker/daemon.json.
+
+    Live-restore keeps containers running across a dockerd restart —
+    handy on single-host. Incompatible with swarm mode: ``docker swarm
+    init`` refuses to proceed with ``--live-restore daemon configuration
+    is incompatible with swarm mode``.
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "info", "--format", "{{.LiveRestoreEnabled}}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return False, ""
+        return result.stdout.strip() == "true", ""
+    except Exception:
+        return False, ""
+
+
 def _check_docker() -> tuple[bool, str]:
     if not shutil.which("docker"):
         return False, "docker not found in PATH"
@@ -184,6 +206,24 @@ def doctor() -> None:
             "Run: spirens gen-htpasswd",
         )
     )
+
+    # Swarm compatibility: live-restore + swarm is a hard incompat in
+    # Docker. Always PASS (fine for single-host); the detail column
+    # tells swarm-curious operators what to change.
+    live_restore_on, _ = _check_docker_live_restore()
+    if live_restore_on:
+        checks.append(
+            (
+                "Docker live-restore",
+                (
+                    True,
+                    "on — incompatible with swarm (fine for single-host)",
+                ),
+                "For swarm: disable live-restore in /etc/docker/daemon.json and reload docker",
+            )
+        )
+    else:
+        checks.append(("Docker live-restore", (True, "off (swarm-compatible)"), ""))
 
     # Docker networks
     passed, detail = _check_network("spirens_frontend")

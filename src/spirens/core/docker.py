@@ -56,8 +56,14 @@ def config_exists(name: str) -> bool:
 
 
 def ensure_config(runner: CommandRunner, name: str, source: str) -> None:
+    # Docker refuses to `config rm` a config that's referenced by a
+    # running service — the proper swarm update is versioning (create
+    # N+1, update the service to reference it, rm N). That's non-trivial
+    # to automate safely, so we match ensure_secret's semantics and
+    # leave existing configs alone. Operators who need to rotate a
+    # config should stop the service, remove, recreate, redeploy.
     if config_exists(name):
-        log(f"  swarm config {name} exists — replacing")
-        runner.run(["docker", "config", "rm", name])
+        log(f"  swarm config {name} exists — leaving as-is (remove manually to rotate)")
+        return
     runner.run(["docker", "config", "create", name, source])
     log(f"  created swarm config {name}")

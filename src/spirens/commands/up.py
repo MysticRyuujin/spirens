@@ -88,8 +88,19 @@ def up(
         kubo = KuboClient()
         log("waiting for Kubo API...")
         if not dry_run:
-            if not kubo.wait_healthy():
-                die("Kubo didn't come up after 36s — check 'docker logs spirens-ipfs'")
+            # Swarm schedules services asynchronously — image pulls, task
+            # placement, and container startup can take minutes on a cold
+            # run. Single-host brings containers up synchronously via
+            # `compose up -d`, so 36s is plenty there. Give swarm a 5m
+            # budget instead.
+            kubo_timeout = 300 if topology is Topology.SWARM else 36
+            if not kubo.wait_healthy(timeout=kubo_timeout):
+                log_hint = (
+                    "docker service logs spirens-ipfs_ipfs"
+                    if topology is Topology.SWARM
+                    else "docker logs spirens-ipfs"
+                )
+                die(f"Kubo didn't come up after {kubo_timeout}s — check '{log_hint}'")
             log("Kubo API healthy")
 
         log("applying Kubo config (CORS, gateway, .eth DoH)")

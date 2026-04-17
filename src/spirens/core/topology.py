@@ -131,15 +131,45 @@ class SwarmRunner(StackRunner):
                 self.runner.run(["docker", "stack", "rm", f"spirens-{stack_name}"])
         if volumes:
             log("--volumes: removing named volumes (DESTRUCTIVE)")
+            # `docker stack rm` is asynchronous — tasks and their
+            # containers linger a few seconds after the command returns.
+            # Trying to `volume rm` while containers still reference it
+            # fails with 'volume is in use'. Poll-then-remove handles both
+            # the happy-fast case and the busy-swarm case.
             for vol in SWARM_VOLUMES:
-                if _volume_exists(vol):
-                    self.runner.run(["docker", "volume", "rm", vol])
+                if not _volume_exists(vol):
+                    continue
+                _wait_for_volume_free(vol, timeout=60)
+                self.runner.run(["docker", "volume", "rm", vol])
 
 
 def get_runner(topology: Topology, runner: CommandRunner, repo_root: Path) -> StackRunner:
     if topology is Topology.SINGLE:
         return SingleHostRunner(runner, repo_root)
     return SwarmRunner(runner, repo_root)
+
+
+def _wait_for_volume_free(name: str, *, timeout: float = 60.0, interval: float = 2.0) -> None:
+    """Block until no running container references ``name``.
+
+    Uses ``docker ps --filter volume=<name>`` to count referencing
+    containers. Returns on first empty result, or raises on timeout so
+    the caller sees a clear error instead of a generic 'volume is in
+    use' from the subsequent rm.
+    """
+    import time
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        r = subprocess.run(
+            ["docker", "ps", "--filter", f"volume={name}", "--format", "{{.ID}}"],
+            capture_output=True,
+            text=True,
+        )
+        if not r.stdout.strip():
+            return
+        time.sleep(interval)
+    raise TimeoutError(f"volume {name} still has referencing containers after {timeout:.0f}s")
 
 
 def _swarm_stack_exists(name: str) -> bool:
