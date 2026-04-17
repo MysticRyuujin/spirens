@@ -14,20 +14,19 @@ from tests.e2e.harness import cloudflare as cf
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
-
 
 @phase("99_cleanup")
 def cleanup(ctx: Context) -> None:
+    remote_repo = ctx.env.remote_repo
     # 1. VM teardown (every step is idempotent / fail-tolerant).
     ssh_run(
         ctx.env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens down single --volumes --yes"],
+        ["bash", "-lc", f"cd {remote_repo} && .venv/bin/spirens down single --volumes --yes"],
         check=False,
     )
     ssh_run(
         ctx.env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens down swarm --volumes --yes"],
+        ["bash", "-lc", f"cd {remote_repo} && .venv/bin/spirens down swarm --volumes --yes"],
         check=False,
     )
     ssh_run(ctx.env, ["bash", "-lc", "docker swarm leave --force 2>/dev/null || true"], check=False)
@@ -39,7 +38,7 @@ def cleanup(ctx: Context) -> None:
     ssh_run(ctx.env, ["docker", "volume", "prune", "-f"], check=False)
     ssh_run(ctx.env, ["docker", "system", "prune", "-af"], check=False)
     ssh_run(
-        ctx.env, ["rm", "-rf", f"{REMOTE_REPO}/letsencrypt", f"{REMOTE_REPO}/secrets"], check=False
+        ctx.env, ["rm", "-rf", f"{remote_repo}/letsencrypt", f"{remote_repo}/secrets"], check=False
     )
 
     # 2. Cloudflare scrub — best-effort. If the token is missing/scoped

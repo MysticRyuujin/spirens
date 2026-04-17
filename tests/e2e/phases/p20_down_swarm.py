@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
+from tests.e2e.harness.ssh import sudo_run
 
-REMOTE_REPO = "/root/spirens"
 DAEMON_JSON = "/etc/docker/daemon.json"
 BACKUP = "/etc/docker/daemon.json.spirens-e2e-backup"
 
@@ -24,15 +24,20 @@ def _restore_daemon_json(ctx: Context) -> None:
     if r.returncode != 0:
         return
     print(f"restoring original {DAEMON_JSON} (live-restore toggle from phase 17)")
-    ssh_run(ctx.env, ["mv", BACKUP, DAEMON_JSON])
-    ssh_run(ctx.env, ["systemctl", "reload", "docker"])
+    # mv + systemctl both need root.
+    sudo_run(ctx.env, ["mv", BACKUP, DAEMON_JSON])
+    sudo_run(ctx.env, ["systemctl", "reload", "docker"])
 
 
 @phase("20_down_swarm")
 def down_swarm(ctx: Context) -> None:
     ssh_run(
         ctx.env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens down swarm --volumes --yes"],
+        [
+            "bash",
+            "-lc",
+            f"cd {ctx.env.remote_repo} && .venv/bin/spirens down swarm --volumes --yes",
+        ],
     )
     # Drop the node back to standalone mode — makes the VM ready for a
     # single-host pass without reboot.

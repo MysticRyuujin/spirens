@@ -14,7 +14,6 @@ from tests.e2e.harness.asserts import assert_status, curl_json
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
 CID = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
 
 HEALTH_TIMEOUT_S = 300.0
@@ -27,7 +26,7 @@ def _health_once(ctx: Context) -> list[dict[str, object]]:
         [
             "bash",
             "-lc",
-            f"cd {REMOTE_REPO} && .venv/bin/spirens health --json --insecure",
+            f"cd {ctx.env.remote_repo} && .venv/bin/spirens health --json --insecure",
         ],
         capture=True,
         check=False,
@@ -45,7 +44,10 @@ def _health_once(ctx: Context) -> list[dict[str, object]]:
 
 @phase("19_swarm_health")
 def swarm_health(ctx: Context) -> None:
-    ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens doctor"])
+    ssh_run(
+        ctx.env,
+        ["bash", "-lc", f"cd {ctx.env.remote_repo} && .venv/bin/spirens doctor"],
+    )
 
     deadline = time.monotonic() + HEALTH_TIMEOUT_S
     last: list[dict[str, object]] = []

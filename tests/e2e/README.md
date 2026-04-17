@@ -40,22 +40,30 @@ subcommand to `remote.py` instead.
 
    Required keys:
 
-   | Key                          | Example                      | Purpose                                                         |
-   | ---------------------------- | ---------------------------- | --------------------------------------------------------------- |
-   | `SPIRENS_TEST_HOST`          | `test01.example.com`      | SSH-resolvable hostname                                         |
-   | `SPIRENS_TEST_IP`            | `192.168.1.10`             | how the workstation reaches the VM (LAN or public IP)           |
-   | `SPIRENS_TEST_USER`          | `root` (default)             |                                                                 |
-   | `SPIRENS_TEST_PROFILE`       | `internal` or `public`       | drives which fixture + which phases run (default: `internal`)   |
-   | `SPIRENS_TEST_PUBLIC_IP`     | `203.0.113.42` (public only) | what A records should point at; falls back to `SPIRENS_TEST_IP` |
-   | `SPIRENS_TEST_DOMAIN`        | `example.com`          | Cloudflare zone under test                                      |
-   | `SPIRENS_TEST_ACME_EMAIL`    | your email                   | LE registration email                                           |
-   | `SPIRENS_TEST_ETH_LOCAL_URL` | `http://192.168.1.50:8545`  | optional local eth node (leave empty to skip the local path)    |
-   | `CF_API_EMAIL`               | your Cloudflare email        |                                                                 |
-   | `CF_DNS_API_TOKEN`           | scoped token (Zone.DNS:Edit) |                                                                 |
+   | Key                          | Example                      | Purpose                                                               |
+   | ---------------------------- | ---------------------------- | --------------------------------------------------------------------- |
+   | `SPIRENS_TEST_HOST`          | `test01.example.com`      | SSH-resolvable hostname                                               |
+   | `SPIRENS_TEST_IP`            | `192.168.1.10`             | how the workstation reaches the VM (LAN or public IP)                 |
+   | `SPIRENS_TEST_USER`          | `root` (default)             | SSH user; cloud images use `azureuser` / `ubuntu` / etc.              |
+   | `SPIRENS_TEST_REMOTE_REPO`   | (empty — auto)               | where to rsync; defaults to `/root/spirens` or `/home/<user>/spirens` |
+   | `SPIRENS_TEST_PROFILE`       | `internal` or `public`       | drives which fixture + which phases run (default: `internal`)         |
+   | `SPIRENS_TEST_PUBLIC_IP`     | `203.0.113.42` (public only) | what A records should point at; falls back to `SPIRENS_TEST_IP`       |
+   | `SPIRENS_TEST_DOMAIN`        | `example.com`          | Cloudflare zone under test                                            |
+   | `SPIRENS_TEST_ACME_EMAIL`    | your email                   | LE registration email                                                 |
+   | `SPIRENS_TEST_ETH_LOCAL_URL` | `http://192.168.1.50:8545`  | optional local eth node (leave empty to skip the local path)          |
+   | `CF_API_EMAIL`               | your Cloudflare email        |                                                                       |
+   | `CF_DNS_API_TOKEN`           | scoped token (Zone.DNS:Edit) |                                                                       |
 
 2. Make sure SSH to the VM works as that user without a password prompt
    (key-based auth). The harness uses `StrictHostKeyChecking=accept-new`,
    so first-run fingerprints are auto-accepted.
+
+   On cloud-vendor VMs (Azure, AWS, GCP), the default user is non-root
+   but has passwordless sudo. The harness auto-elevates the commands
+   that need root (docker install, `/etc/docker/daemon.json`,
+   `systemctl`) via `sudo -n`, and runs the rest as the SSH user.
+   `bootstrap-host` also runs `usermod -aG docker <user>` so subsequent
+   phases can invoke `docker` without sudo.
 
 3. Install the host prereqs (uv, Python 3.14, Docker). On a fresh Ubuntu
    snapshot, run:
@@ -90,6 +98,21 @@ SPIRENS_TEST_PROFILE=public edit .env.test
 # Reset VM + CF zone between attempts
 ./tests/e2e/run.py --phase 99_cleanup
 ```
+
+### Cloud-vendor VMs (Azure, AWS, GCP)
+
+- Set `SPIRENS_TEST_USER` to the image's default user (`azureuser`,
+  `ubuntu`, etc.). The harness derives `remote_repo` as
+  `/home/<user>/spirens` automatically; override via
+  `SPIRENS_TEST_REMOTE_REPO` only if the home layout is unusual.
+- Passwordless sudo is required for the user (standard on cloud
+  default images). The harness runs `sudo -n` for elevation — if sudo
+  would prompt, commands fail loudly instead of hanging.
+- `remote.py bootstrap-host` installs uv + Python 3.14 + Docker and
+  adds the SSH user to the `docker` group so subsequent phases can
+  invoke `docker` without sudo. Existing ssh sessions don't see the
+  new group until a fresh session — each harness phase opens its own,
+  so this works automatically.
 
 ### Public-profile setup notes
 

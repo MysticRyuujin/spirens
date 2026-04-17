@@ -14,8 +14,6 @@ import time
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
-
 HEALTH_TIMEOUT_S = 300.0  # first-run ACME + container warmup can take ~3min
 HEALTH_POLL_S = 15.0
 
@@ -36,7 +34,7 @@ def _health_once(ctx: Context) -> list[dict[str, object]]:
         [
             "bash",
             "-lc",
-            f"cd {REMOTE_REPO} && .venv/bin/spirens health --json --insecure",
+            f"cd {ctx.env.remote_repo} && .venv/bin/spirens health --json --insecure",
         ],
         capture=True,
         check=False,
@@ -55,7 +53,7 @@ def _health_once(ctx: Context) -> list[dict[str, object]]:
 @phase("07_health_doctor")
 def health_doctor(ctx: Context) -> None:
     # 1. doctor: authoritative preflight, internal-profile aware.
-    ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens doctor"])
+    ssh_run(ctx.env, ["bash", "-lc", f"cd {ctx.env.remote_repo} && .venv/bin/spirens doctor"])
 
     # 2. health: poll until every check passes or we hit the timeout.
     deadline = time.monotonic() + HEALTH_TIMEOUT_S

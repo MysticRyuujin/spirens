@@ -18,7 +18,6 @@ import time
 from pathlib import Path
 
 import yaml
-
 from tests.e2e.harness import cloudflare as cf
 from tests.e2e.harness.phases import Context, phase
 
@@ -59,9 +58,7 @@ def _wait_for_resolution(fqdn: str, expected_ip: str, deadline: float) -> bool:
 @phase("10_public_dns_preflight", profiles=("public",))
 def public_dns_preflight(ctx: Context) -> None:
     if not ctx.env.public_ip:
-        raise AssertionError(
-            "public profile selected but SPIRENS_TEST_PUBLIC_IP is empty"
-        )
+        raise AssertionError("public profile selected but SPIRENS_TEST_PUBLIC_IP is empty")
 
     manifest = _load_manifest()
     print(f"laying down {len(manifest)} A records from {RECORDS_YAML.name} → {ctx.env.public_ip}")

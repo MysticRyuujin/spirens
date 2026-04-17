@@ -19,8 +19,8 @@ import json
 
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
+from tests.e2e.harness.ssh import sudo_bash_lc, sudo_run
 
-REMOTE_REPO = "/root/spirens"
 DAEMON_JSON = "/etc/docker/daemon.json"
 BACKUP = "/etc/docker/daemon.json.spirens-e2e-backup"
 
@@ -30,9 +30,15 @@ def _disable_live_restore_if_set(ctx: Context) -> None:
 
     Saves the original at ``BACKUP`` so phase 20 can undo the change.
     If the file doesn't exist, doesn't touch it. Safe to re-run.
+
+    ``cp`` into ``/etc/`` and rewriting ``daemon.json`` both require
+    root, so those steps use ``sudo_run`` / ``sudo_bash_lc``. On cloud
+    VMs with a non-root default user this relies on passwordless sudo
+    (standard for Azure azureuser, AWS ubuntu, etc.).
     """
-    # Check whether daemon.json has live-restore set. Capture=True so we
-    # don't leak the token-or-adjacent registry-mirrors config to stdout.
+    # Check whether daemon.json has live-restore set. Readable without
+    # sudo on default installs (0644 root:root), so plain ssh_run is
+    # enough; capture=True keeps registry-mirror URLs out of stdout.
     r = ssh_run(ctx.env, ["cat", DAEMON_JSON], capture=True, check=False)
     if r.returncode != 0:
         print(f"no {DAEMON_JSON} — swarm-init will use defaults")
@@ -47,15 +53,13 @@ def _disable_live_restore_if_set(ctx: Context) -> None:
         return  # already off / absent
 
     print("daemon.json has live-restore=true — temporarily disabling for swarm")
-    ssh_run(ctx.env, ["cp", "-a", DAEMON_JSON, BACKUP])
+    sudo_run(ctx.env, ["cp", "-a", DAEMON_JSON, BACKUP])
     cfg["live-restore"] = False
     new = json.dumps(cfg, indent=2)
-    # Write via a heredoc so we don't have to scp a temp file.
-    ssh_run(
-        ctx.env,
-        ["bash", "-lc", f"cat > {DAEMON_JSON} <<'EOF'\n{new}\nEOF"],
-    )
-    ssh_run(ctx.env, ["systemctl", "reload", "docker"])
+    # Heredoc write — elevated so the shell's > redirection can clobber
+    # a root-owned file in /etc/.
+    sudo_bash_lc(ctx.env, f"cat > {DAEMON_JSON} <<'EOF'\n{new}\nEOF")
+    sudo_run(ctx.env, ["systemctl", "reload", "docker"])
 
 
 @phase("17_swarm_bootstrap")
@@ -83,13 +87,14 @@ def swarm_bootstrap(ctx: Context) -> None:
         ["bash", "-lc", "docker node update --label-add ipfs=true $(docker node ls -q)"],
     )
 
+    remote_repo = ctx.env.remote_repo
     # Swarm bootstrap creates overlay networks + external configs/secrets.
     ssh_run(
         ctx.env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens bootstrap --swarm"],
+        ["bash", "-lc", f"cd {remote_repo} && .venv/bin/spirens bootstrap --swarm"],
     )
     # Idempotency guard — second run must be a no-op.
     ssh_run(
         ctx.env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens bootstrap --swarm"],
+        ["bash", "-lc", f"cd {remote_repo} && .venv/bin/spirens bootstrap --swarm"],
     )

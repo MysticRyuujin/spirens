@@ -10,8 +10,6 @@ from __future__ import annotations
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
-
 
 def _docker_state_snapshot(ctx: Context) -> tuple[str, str, str]:
     # Snapshot containers/networks/volumes as a stable string so the caller
@@ -36,7 +34,7 @@ def dry_runs(ctx: Context) -> None:
         "spirens configure-ipfs --dry-run",
     ]
     for cmd in dry_cmds:
-        ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/{cmd}"])
+        ssh_run(ctx.env, ["bash", "-lc", f"cd {ctx.env.remote_repo} && .venv/bin/{cmd}"])
 
     after = _docker_state_snapshot(ctx)
     if before != after:

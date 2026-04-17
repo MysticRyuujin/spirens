@@ -38,15 +38,19 @@ from tests.e2e.harness.env import TestEnv  # noqa: E402
 from tests.e2e.harness.env import load as load_env  # noqa: E402
 from tests.e2e.harness.ssh import run as ssh_run  # noqa: E402
 
-REMOTE_REPO = "/root/spirens"
 
+def _spirens(env: TestEnv, *args: str) -> list[str]:
+    """Build ``cd <remote_repo> && .venv/bin/spirens …`` on the VM.
 
-def _spirens(*args: str) -> list[str]:
-    """Build ``cd /root/spirens && .venv/bin/spirens …`` on the VM."""
+    ``remote_repo`` comes from the env (``/root/spirens`` when the SSH
+    user is root, ``/home/<user>/spirens`` otherwise), so cloud-vendor
+    default users (Azure azureuser, AWS ubuntu, etc.) work without
+    special-casing.
+    """
     return [
         "bash",
         "-lc",
-        f"cd {REMOTE_REPO} && .venv/bin/spirens " + shlex.join(args),
+        f"cd {env.remote_repo} && .venv/bin/spirens " + shlex.join(args),
     ]
 
 
@@ -68,25 +72,25 @@ def cmd_logs(env: TestEnv, args: argparse.Namespace) -> int:
 
 
 def cmd_health(env: TestEnv, _args: argparse.Namespace) -> int:
-    ssh_run(env, _spirens("health", "--json"))
+    ssh_run(env, _spirens(env, "health", "--json"))
     return 0
 
 
 def cmd_doctor(env: TestEnv, _args: argparse.Namespace) -> int:
-    ssh_run(env, _spirens("doctor"))
+    ssh_run(env, _spirens(env, "doctor"))
     return 0
 
 
 def cmd_pytest(env: TestEnv, _args: argparse.Namespace) -> int:
     ssh_run(
         env,
-        ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/pytest -q"],
+        ["bash", "-lc", f"cd {env.remote_repo} && .venv/bin/pytest -q"],
     )
     return 0
 
 
 def cmd_exec(env: TestEnv, args: argparse.Namespace) -> int:
-    ssh_run(env, _spirens(*args.spirens_args))
+    ssh_run(env, _spirens(env, *args.spirens_args))
     return 0
 
 
@@ -96,21 +100,21 @@ def cmd_shell(env: TestEnv, args: argparse.Namespace) -> int:
 
 
 def cmd_acme_json(env: TestEnv, _args: argparse.Namespace) -> int:
-    ssh_run(env, ["cat", f"{REMOTE_REPO}/letsencrypt/acme.json"])
+    ssh_run(env, ["cat", f"{env.remote_repo}/letsencrypt/acme.json"])
     return 0
 
 
 def cmd_clean(env: TestEnv, _args: argparse.Namespace) -> int:
     # Best-effort teardown. We tolerate each step failing so `clean` stays
     # idempotent against partial / already-clean VM state.
-    steps = [
-        _spirens("down", "single", "--volumes", "--yes"),
-        _spirens("down", "swarm", "--volumes", "--yes"),
+    steps: list[list[str]] = [
+        _spirens(env, "down", "single", "--volumes", "--yes"),
+        _spirens(env, "down", "swarm", "--volumes", "--yes"),
         ["bash", "-lc", "docker swarm leave --force 2>/dev/null || true"],
         ["bash", "-lc", "docker network rm spirens_frontend spirens_backend 2>/dev/null || true"],
         ["docker", "volume", "prune", "-f"],
         ["docker", "system", "prune", "-af"],
-        ["rm", "-rf", f"{REMOTE_REPO}/letsencrypt", f"{REMOTE_REPO}/secrets"],
+        ["rm", "-rf", f"{env.remote_repo}/letsencrypt", f"{env.remote_repo}/secrets"],
     ]
     for cmd in steps:
         ssh_run(env, cmd, check=False)
@@ -123,11 +127,17 @@ def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
     Idempotent — each step guards on a `command -v` or `uv python list`
     check so re-running against a partially-prepared host is cheap. Not a
     harness phase; this is a one-off per snapshot restore.
+
+    Cloud-vendor images (Azure, AWS, GCP) ship a non-root default user
+    (``azureuser``/``ubuntu``/etc.) with passwordless sudo. For those
+    runs, docker install + systemctl + adding the user to the ``docker``
+    group all elevate via sudo; uv installs to ``~/.local/bin`` and
+    never needs root.
     """
-    # Each entry: (label, bash script). Scripts use `bash -lc` so $PATH
-    # picks up ~/.local/bin after the uv installer drops files there
-    # (Ubuntu's ~/.profile re-adds it when the directory exists).
-    steps: list[tuple[str, str]] = [
+    from tests.e2e.harness.ssh import sudo_bash_lc
+
+    # User-space steps (no sudo): uv + python 3.14.
+    user_steps: list[tuple[str, str]] = [
         (
             "uv",
             "command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh",
@@ -138,20 +148,42 @@ def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
             "(uv python list --only-installed | grep -q '^cpython-3\\.14') "
             "|| uv python install 3.14",
         ),
-        (
-            "docker",
-            "command -v docker >/dev/null || (curl -fsSL https://get.docker.com | sh)",
-        ),
-        ("docker service", "systemctl enable --now docker"),
     ]
-    for label, script in steps:
+    for label, script in user_steps:
         print(f"\n--- {label} ---")
         ssh_run(env, ["bash", "-lc", script])
+
+    # System-level steps (sudo on non-root). get.docker.com detects when
+    # invoked as non-root and uses sudo internally — but we pass
+    # sudo-sh explicitly so the failure mode is obvious and the single
+    # sudo prompt (if interactive) is upfront rather than buried.
+    print("\n--- docker ---")
+    sudo_bash_lc(
+        env,
+        "command -v docker >/dev/null "
+        "|| (curl -fsSL https://get.docker.com -o /tmp/get-docker.sh "
+        "&& sh /tmp/get-docker.sh && rm -f /tmp/get-docker.sh)",
+    )
+
+    print("\n--- docker service ---")
+    sudo_bash_lc(env, "systemctl enable --now docker")
+
+    # usermod -aG docker $USER: only meaningful for non-root. After this,
+    # any *new* ssh session (the one that runs the next phase) will have
+    # the docker group active and `docker ...` will work without sudo.
+    if env.sudo:
+        print(f"\n--- docker group (adding {env.user}) ---")
+        sudo_bash_lc(env, f"usermod -aG docker {env.user}")
+        print(
+            "  note: existing ssh sessions don't pick up the new group; "
+            "subsequent harness phases open fresh sessions so they inherit it."
+        )
+
     return 0
 
 
 def cmd_sync(env: TestEnv, args: argparse.Namespace) -> int:
-    """rsync the workstation worktree to /root/spirens on the VM."""
+    """rsync the workstation worktree to <remote_repo> on the VM."""
     from tests.e2e.harness.ssh import rsync_up
 
     excludes = [
@@ -169,7 +201,7 @@ def cmd_sync(env: TestEnv, args: argparse.Namespace) -> int:
         ".claude",
         ".env",  # VM-local operator state; matches phases/p01_sync_repo.py
     ]
-    rsync_up(env, REPO_ROOT, REMOTE_REPO, exclude=excludes, delete=not args.no_delete)
+    rsync_up(env, REPO_ROOT, env.remote_repo, exclude=excludes, delete=not args.no_delete)
     return 0
 
 

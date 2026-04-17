@@ -7,7 +7,6 @@ import time
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
 EXPECTED_CONTAINERS = (
     "spirens-traefik",
     "spirens-erpc",
@@ -24,7 +23,10 @@ def up_single(ctx: Context) -> None:
     # runs last in `--all`. If a mid-flight phase (07, 08) fails, 99 will
     # still run; if the user is iterating on phase 05 alone they want the
     # stack to stay up for inspection.
-    ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens up single"])
+    ssh_run(
+        ctx.env,
+        ["bash", "-lc", f"cd {ctx.env.remote_repo} && .venv/bin/spirens up single"],
+    )
 
     # Give containers ~30s to finish healthcheck sequences. We don't parse
     # `docker inspect` here — p07 will run `spirens health` which is stricter.

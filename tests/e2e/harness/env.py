@@ -32,6 +32,20 @@ class TestEnv:
     cf_dns_api_token: str
     profile: str  # "internal" | "public" — default "internal" if unset
     public_ip: str  # IP public DNS A records should point at; empty for internal
+    remote_repo: str  # path on the VM where rsync lands; /root/spirens for root,
+    # /home/<user>/spirens otherwise (overridable via SPIRENS_TEST_REMOTE_REPO)
+
+    @property
+    def sudo(self) -> bool:
+        """True when remote commands need sudo elevation.
+
+        Cloud-vendor images typically ship a non-root default user
+        (``azureuser`` on Azure, ``ubuntu`` on AWS, ``debian`` / ``gcp-user``
+        on GCP) with passwordless sudo. Docker install, systemctl, and
+        /etc/docker/* edits all need elevation in that setup; as root
+        they don't.
+        """
+        return self.user != "root"
 
 
 def _parse(path: Path) -> dict[str, str]:
@@ -62,6 +76,15 @@ def load() -> TestEnv:
             raise SystemExit(f"{ENV_FILE.name}: missing required key {key}")
         return v
 
+    user = raw.get("SPIRENS_TEST_USER") or "root"
+    remote_repo = raw.get("SPIRENS_TEST_REMOTE_REPO", "").strip()
+    if not remote_repo:
+        # Default: /root/spirens for root, /home/<user>/spirens otherwise.
+        # Covers Azure (azureuser), AWS (ubuntu/ec2-user), GCP, and most
+        # Debian/Ubuntu/RHEL defaults. Operators on systems with
+        # non-standard home roots can set SPIRENS_TEST_REMOTE_REPO.
+        remote_repo = "/root/spirens" if user == "root" else f"/home/{user}/spirens"
+
     profile = raw.get("SPIRENS_TEST_PROFILE", "internal").strip() or "internal"
     if profile not in ("internal", "public"):
         raise SystemExit(
@@ -78,7 +101,7 @@ def load() -> TestEnv:
     return TestEnv(
         host=req("SPIRENS_TEST_HOST"),
         ip=req("SPIRENS_TEST_IP"),
-        user=raw.get("SPIRENS_TEST_USER") or "root",
+        user=user,
         domain=req("SPIRENS_TEST_DOMAIN"),
         acme_email=req("SPIRENS_TEST_ACME_EMAIL"),
         eth_local_url=raw.get("SPIRENS_TEST_ETH_LOCAL_URL", ""),
@@ -86,4 +109,5 @@ def load() -> TestEnv:
         cf_dns_api_token=req("CF_DNS_API_TOKEN"),
         profile=profile,
         public_ip=public_ip,
+        remote_repo=remote_repo,
     )

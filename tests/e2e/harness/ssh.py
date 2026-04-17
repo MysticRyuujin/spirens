@@ -58,6 +58,39 @@ def run(
     return subprocess.run(argv, check=check, text=True, capture_output=capture)
 
 
+def sudo_run(
+    env: TestEnv,
+    cmd: Sequence[str],
+    *,
+    check: bool = True,
+    capture: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``cmd`` as root on the VM (via ``sudo -n`` on non-root users).
+
+    ``sudo -n`` fails loudly if passwordless sudo isn't configured rather
+    than hanging on a password prompt. That matches the cloud-vendor
+    default (Azure, AWS, GCP all grant passwordless sudo to their stock
+    user); operators who disabled it need to re-enable for the test user.
+
+    On root sessions this is a no-op — ``cmd`` runs directly.
+    """
+    wrapped: list[str] = ["sudo", "-n", *cmd] if env.sudo else list(cmd)
+    return run(env, wrapped, check=check, capture=capture)
+
+
+def sudo_bash_lc(
+    env: TestEnv,
+    script: str,
+    *,
+    check: bool = True,
+    capture: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``bash -lc <script>`` as root. Useful for heredocs and pipes
+    where the elevation must cover the whole shell (e.g. redirections
+    writing to ``/etc/docker/daemon.json``)."""
+    return sudo_run(env, ["bash", "-lc", script], check=check, capture=capture)
+
+
 def rsync_up(
     env: TestEnv,
     src: Path,

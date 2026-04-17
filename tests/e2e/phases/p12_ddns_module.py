@@ -25,9 +25,6 @@ from tests.e2e.harness import cloudflare as cf
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
-DDNS_COMPOSE = f"{REMOTE_REPO}/compose/single-host/optional/compose.ddns.yml"
-
 TRACK_NAME = "rpc"  # which name to have DDNS manage for this test
 WAIT_TIMEOUT_S = 180.0
 WAIT_POLL_S = 10.0
@@ -74,15 +71,16 @@ def ddns_module(ctx: Context) -> None:
     # reads $DDNS_DOMAINS, which the wrapper `spirens up` normally
     # derives from DDNS_RECORDS. Injecting here keeps us independent of
     # .env edits (and keeps phase 13 usable right after).
+    remote_repo = ctx.env.remote_repo
     ssh_run(
         ctx.env,
         [
             "bash",
             "-lc",
             (
-                f"cd {REMOTE_REPO}/compose/single-host "
+                f"cd {remote_repo}/compose/single-host "
                 f"&& DDNS_DOMAINS={domains} "
-                f"docker compose --env-file {REMOTE_REPO}/.env "
+                f"docker compose --env-file {remote_repo}/.env "
                 f"-f optional/compose.ddns.yml up -d"
             ),
         ],
@@ -95,7 +93,7 @@ def ddns_module(ctx: Context) -> None:
                 "bash",
                 "-lc",
                 (
-                    f"cd {REMOTE_REPO}/compose/single-host "
+                    f"cd {remote_repo}/compose/single-host "
                     f"&& docker compose -f optional/compose.ddns.yml down 2>/dev/null || true"
                 ),
             ],
@@ -115,7 +113,4 @@ def ddns_module(ctx: Context) -> None:
     # harness's declared SPIRENS_TEST_PUBLIC_IP. Not a hard failure —
     # NAT and CGNAT legitimately cause divergence — but useful signal.
     if ctx.env.public_ip and content != ctx.env.public_ip:
-        print(
-            f"! note: DDNS detected {content}, "
-            f"SPIRENS_TEST_PUBLIC_IP is {ctx.env.public_ip}"
-        )
+        print(f"! note: DDNS detected {content}, SPIRENS_TEST_PUBLIC_IP is {ctx.env.public_ip}")

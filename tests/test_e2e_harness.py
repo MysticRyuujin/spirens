@@ -11,8 +11,8 @@ import pytest
 
 from tests.e2e.harness.env import TestEnv
 from tests.e2e.harness.phases import (
-    Context,
     PHASES,
+    Context,
     phase,
     phase_profiles,
     run_phase,
@@ -31,6 +31,7 @@ def _env(**overrides: str) -> TestEnv:
         "cf_dns_api_token": "tok",
         "profile": "internal",
         "public_ip": "",
+        "remote_repo": "/root/spirens",
     }
     base.update(overrides)
     return TestEnv(**base)  # type: ignore[arg-type]
@@ -173,3 +174,73 @@ class TestTestEnvParsing:
         monkeypatch.setattr(env_mod, "ENV_FILE", envfile)
         with pytest.raises(SystemExit, match="SPIRENS_TEST_PROFILE"):
             env_mod.load()
+
+
+class TestRemoteRepoDerivation:
+    """Where should rsync land on the VM? Depends on the SSH user:
+    /root/spirens for root, /home/<user>/spirens for cloud-vendor defaults."""
+
+    def _write(self, tmp_path, monkeypatch, body: str):
+        envfile = tmp_path / ".env.test"
+        envfile.write_text(body)
+        from tests.e2e.harness import env as env_mod
+
+        monkeypatch.setattr(env_mod, "ENV_FILE", envfile)
+        return env_mod.load()
+
+    def _common_body(self, **extra: str) -> str:
+        lines = {
+            "SPIRENS_TEST_HOST": "x",
+            "SPIRENS_TEST_IP": "1.2.3.4",
+            "SPIRENS_TEST_DOMAIN": "example.com",
+            "SPIRENS_TEST_ACME_EMAIL": "a@example.com",
+            "CF_API_EMAIL": "a@example.com",
+            "CF_DNS_API_TOKEN": "tok",
+        }
+        lines.update(extra)
+        return "".join(f"{k}={v}\n" for k, v in lines.items())
+
+    def test_root_user_gets_root_spirens(self, tmp_path, monkeypatch) -> None:
+        env = self._write(tmp_path, monkeypatch, self._common_body())
+        assert env.user == "root"
+        assert env.remote_repo == "/root/spirens"
+        assert env.sudo is False
+
+    def test_azureuser_gets_home_path(self, tmp_path, monkeypatch) -> None:
+        env = self._write(tmp_path, monkeypatch, self._common_body(SPIRENS_TEST_USER="azureuser"))
+        assert env.user == "azureuser"
+        assert env.remote_repo == "/home/azureuser/spirens"
+        assert env.sudo is True
+
+    def test_aws_ubuntu_gets_home_path(self, tmp_path, monkeypatch) -> None:
+        env = self._write(tmp_path, monkeypatch, self._common_body(SPIRENS_TEST_USER="ubuntu"))
+        assert env.remote_repo == "/home/ubuntu/spirens"
+        assert env.sudo is True
+
+    def test_explicit_remote_repo_override(self, tmp_path, monkeypatch) -> None:
+        env = self._write(
+            tmp_path,
+            monkeypatch,
+            self._common_body(
+                SPIRENS_TEST_USER="alice",
+                SPIRENS_TEST_REMOTE_REPO="/var/lib/spirens",
+            ),
+        )
+        assert env.remote_repo == "/var/lib/spirens"
+        # Override doesn't affect sudo — that's purely user-derived.
+        assert env.sudo is True
+
+    def test_empty_remote_repo_env_var_falls_back_to_convention(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        # Explicit-but-empty SPIRENS_TEST_REMOTE_REPO shouldn't fall into
+        # a broken "" remote path; treat it as unset.
+        env = self._write(
+            tmp_path,
+            monkeypatch,
+            self._common_body(
+                SPIRENS_TEST_USER="azureuser",
+                SPIRENS_TEST_REMOTE_REPO="",
+            ),
+        )
+        assert env.remote_repo == "/home/azureuser/spirens"

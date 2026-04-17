@@ -22,7 +22,6 @@ from tests.e2e.harness import cloudflare as cf
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
 TRACK_NAME = "ens-resolver"
 
 WAIT_TIMEOUT_S = 180.0
@@ -61,14 +60,15 @@ def dns_sync_module(ctx: Context) -> None:
     # the container exits cleanly. `spirens up` would also include it,
     # but that drags the whole stack + might start it periodically; for
     # a targeted test we run it by itself.
+    remote_repo = ctx.env.remote_repo
     ssh_run(
         ctx.env,
         [
             "bash",
             "-lc",
             (
-                f"cd {REMOTE_REPO}/compose/single-host && "
-                f"docker compose --project-directory . --env-file {REMOTE_REPO}/.env "
+                f"cd {remote_repo}/compose/single-host && "
+                f"docker compose --project-directory . --env-file {remote_repo}/.env "
                 "-f optional/compose.dns-sync.yml run --rm dns-sync"
             ),
         ],
@@ -79,6 +79,4 @@ def dns_sync_module(ctx: Context) -> None:
     print(f"dns-sync installed A record: {fqdn} → {content}")
 
     if ctx.env.public_ip and content != ctx.env.public_ip:
-        raise AssertionError(
-            f"dns-sync installed {fqdn} → {content}, expected {ctx.env.public_ip}"
-        )
+        raise AssertionError(f"dns-sync installed {fqdn} → {content}, expected {ctx.env.public_ip}")

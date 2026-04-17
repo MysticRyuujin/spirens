@@ -14,7 +14,6 @@ from tests.e2e.harness.ssh import rsync_up
 from tests.e2e.harness.ssh import run as ssh_run
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-REMOTE_REPO = "/root/spirens"
 
 EXCLUDES = (
     ".git",
@@ -38,8 +37,9 @@ EXCLUDES = (
 
 @phase("01_sync_repo")
 def sync(ctx: Context) -> None:
-    ssh_run(ctx.env, ["mkdir", "-p", REMOTE_REPO])
-    rsync_up(ctx.env, REPO_ROOT, REMOTE_REPO, exclude=EXCLUDES)
+    remote_repo = ctx.env.remote_repo
+    ssh_run(ctx.env, ["mkdir", "-p", remote_repo])
+    rsync_up(ctx.env, REPO_ROOT, remote_repo, exclude=EXCLUDES)
 
     # Install (or refresh) the venv. [dev] pulls in pytest for the VM-side
     # smoke test below.
@@ -48,9 +48,9 @@ def sync(ctx: Context) -> None:
         [
             "bash",
             "-lc",
-            f"cd {REMOTE_REPO} && uv venv --python 3.14 --clear && uv pip install -e '.[dev]'",
+            f"cd {remote_repo} && uv venv --python 3.14 --clear && uv pip install -e '.[dev]'",
         ],
     )
 
     # Smoke: pytest should pass on the VM with the synced worktree.
-    ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/pytest -q"])
+    ssh_run(ctx.env, ["bash", "-lc", f"cd {remote_repo} && .venv/bin/pytest -q"])

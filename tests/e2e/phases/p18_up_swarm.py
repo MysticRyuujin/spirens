@@ -12,8 +12,6 @@ import time
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
 
-REMOTE_REPO = "/root/spirens"
-
 EXPECTED_SERVICES = (
     "spirens-traefik_traefik",
     "spirens-redis_redis",
@@ -50,7 +48,10 @@ def _services_ready(ctx: Context) -> tuple[bool, dict[str, str]]:
 
 @phase("18_up_swarm")
 def up_swarm(ctx: Context) -> None:
-    ssh_run(ctx.env, ["bash", "-lc", f"cd {REMOTE_REPO} && .venv/bin/spirens up swarm"])
+    ssh_run(
+        ctx.env,
+        ["bash", "-lc", f"cd {ctx.env.remote_repo} && .venv/bin/spirens up swarm"],
+    )
 
     deadline = time.monotonic() + CONVERGE_TIMEOUT_S
     while time.monotonic() < deadline:
