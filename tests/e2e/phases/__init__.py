@@ -13,5 +13,9 @@ from tests.e2e.phases import (  # noqa: F401
     p05_up_single,
     p07_health_doctor,
     p08_endpoints,
+    p17_swarm_bootstrap,
+    p18_up_swarm,
+    p19_swarm_health,
+    p20_down_swarm,
     p99_cleanup,
 )

@@ -167,6 +167,7 @@ def cmd_sync(env: TestEnv, args: argparse.Namespace) -> int:
         "tests/e2e/report",
         "tests/e2e/.env.test",
         ".claude",
+        ".env",  # VM-local operator state; matches phases/p01_sync_repo.py
     ]
     rsync_up(env, REPO_ROOT, REMOTE_REPO, exclude=excludes, delete=not args.no_delete)
     return 0

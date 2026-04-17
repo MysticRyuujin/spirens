@@ -29,6 +29,10 @@ EXCLUDES = (
     "tests/e2e/report",
     "tests/e2e/.env.test",
     ".claude",
+    # Keep VM-local operator state across re-syncs. These don't exist
+    # on the workstation so without --exclude, rsync --delete would nuke
+    # them (tripping phase 17 which expects .env to already be there).
+    ".env",
 )
 
 

@@ -103,6 +103,62 @@ identifiers in the last 168h0m0s`.
   `spirens health --insecure` (auto-on when `ACME_CA_SERVER` contains
   `staging`) so the health checks pass against the Fake LE root.
 
+## 17_swarm_bootstrap: `bootstrap --swarm` references deleted `config/traefik/traefik.yml`
+
+- **Severity:** bug (SPIRENS)
+- **Repro:** fresh swarm, run `spirens bootstrap --swarm`.
+- **Expected:** success.
+- **Actual:** `error reading content from "…/config/traefik/traefik.yml": open …: no such file or directory`. The file was removed when Traefik moved to CLI-only static config; `bootstrap.py` wasn't updated.
+- **Status:** fixed in `src/spirens/commands/bootstrap.py` — dropped the `spirens_traefik_yml` config upload.
+
+## 17_swarm_bootstrap: `docker swarm init` fails when daemon `live-restore: true`
+
+- **Severity:** bug (SPIRENS doc/UX); environmental on test-host
+- **Repro:** daemon.json has `"live-restore": true`; run `docker swarm init`.
+- **Expected:** either clear SPIRENS-side failure before trying, or a doctor check.
+- **Actual:** Docker rejects with `--live-restore daemon configuration is incompatible with swarm mode`.
+- **Status:** fixed — `spirens doctor` grows a "Docker live-restore" row that flags the incompatibility in its detail column; harness phases 17/20 temporarily toggle live-restore off for the swarm cycle and restore on teardown.
+
+## 18_up_swarm: IPFS scheduling blocked on missing `node.labels.ipfs`
+
+- **Severity:** UX (docs)
+- **Repro:** fresh one-node swarm, deploy `stack.ipfs.yml`.
+- **Expected:** replica schedules.
+- **Actual:** `no suitable node (scheduling constraints not satisfied on 1 node)` — the stack intentionally pins IPFS to `node.labels.ipfs == true` (production-sensible since the datastore shouldn't migrate), but the label isn't applied by default.
+- **Status:** harness applies the label in phase 17 so single-node tests schedule. Production operators label their chosen IPFS host explicitly per the stack.ipfs.yml comment block. Not a SPIRENS code change.
+
+## 18_up_swarm: `up swarm` Kubo-wait timeout (36s) is way too short for swarm
+
+- **Severity:** bug (SPIRENS)
+- **Repro:** `spirens up swarm` on a fresh swarm.
+- **Expected:** `up swarm` waits long enough for swarm scheduling + image pulls + container start before hitting the Kubo API.
+- **Actual:** fails with `Kubo didn't come up after 36s — check 'docker logs spirens-ipfs'` (wrong hint for swarm, too).
+- **Status:** fixed in `src/spirens/commands/up.py` — timeout is 36s for single-host (synchronous compose up), 300s for swarm (asynchronous scheduling); hint references `docker service logs spirens-ipfs_ipfs` in swarm mode.
+
+## 18_up_swarm: `ensure_config` tries to `docker config rm` an in-use config
+
+- **Severity:** bug (SPIRENS)
+- **Repro:** `spirens bootstrap --swarm` with any stack deployed that references the config.
+- **Expected:** re-bootstrap is idempotent — existing configs are left alone.
+- **Actual:** `rpc error: code = InvalidArgument desc = config 'spirens_traefik_dynamic' is in use by the following service…`
+- **Status:** fixed in `src/spirens/core/docker.py` — `ensure_config` now matches `ensure_secret` semantics (leave as-is if exists, log an operator hint to rotate manually).
+
+## 18_up_swarm: `restart_container` only knew the single-host container name
+
+- **Severity:** bug (SPIRENS)
+- **Repro:** `spirens configure-ipfs` (or the Kubo restart inside `up`) on swarm.
+- **Expected:** restart the IPFS task.
+- **Actual:** `docker restart spirens-ipfs` — no such container in swarm (container is `spirens-ipfs_ipfs.N.xxx`). Silent no-op.
+- **Status:** fixed in `src/spirens/core/ipfs.py` — falls back to `docker service update --force spirens-ipfs_ipfs` when the single-host container isn't present.
+
+## 20_down_swarm: `down swarm --volumes` races with `stack rm` async teardown
+
+- **Severity:** bug (SPIRENS)
+- **Repro:** `spirens down swarm --volumes` immediately after `spirens up swarm`.
+- **Expected:** volumes removed.
+- **Actual:** `volume is in use — [<container-id>]` because `docker stack rm` is asynchronous; containers linger seconds after the command returns.
+- **Status:** fixed in `src/spirens/core/topology.py` — volume removal now polls `docker ps --filter volume=<name>` until the referencing container set is empty (60s timeout).
+
 ## post-ACME: orphan `_acme-challenge.*` TXT records left on the zone
 
 - **Severity:** bug (Traefik/lego interaction — likely upstream)
