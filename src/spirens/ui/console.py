@@ -9,6 +9,7 @@ Matches the visual style of the original bash scripts:
 from __future__ import annotations
 
 import sys
+from typing import NoReturn
 
 from rich.console import Console
 
@@ -23,6 +24,6 @@ def warn(msg: str) -> None:
     console.print(f"[bold yellow][!][/bold yellow] {msg}", style="yellow")
 
 
-def die(msg: str, code: int = 1) -> None:
+def die(msg: str, code: int = 1) -> NoReturn:
     console.print(f"[bold red][x][/bold red] {msg}", style="red")
     sys.exit(code)

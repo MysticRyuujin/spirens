@@ -8,6 +8,7 @@ is how Docker commands are issued: ``docker compose`` for single-host,
 from __future__ import annotations
 
 import subprocess
+import time
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from pathlib import Path
@@ -159,8 +160,6 @@ def _wait_for_volume_free(name: str, *, timeout: float = 60.0, interval: float =
     poll waits that out rather than letting the caller hit a raw
     "volume is in use" error.
     """
-    import time
-
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = subprocess.run(

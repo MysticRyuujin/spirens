@@ -13,7 +13,6 @@ LICENSE
 # these formatted by yamllint + hand only, to preserve the careful alignment
 # of comments that the "why" docs reference by line.
 config/erpc/erpc.yaml
-config/traefik/traefik.yml
 config/traefik/dynamic.yml
 
 # Architecture diagram source (Mermaid) — prettier's mermaid support mangles it.

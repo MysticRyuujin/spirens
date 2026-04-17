@@ -100,23 +100,15 @@ class DnsProvider(ABC):
         self.close()
 
 
+@dataclass(frozen=True)
 class WizardField:
     """A field the setup wizard should prompt for."""
 
-    def __init__(
-        self,
-        key: str,
-        prompt: str,
-        *,
-        secret: bool = False,
-        required: bool = True,
-        default: str = "",
-    ) -> None:
-        self.key = key
-        self.prompt = prompt
-        self.secret = secret
-        self.required = required
-        self.default = default
+    key: str
+    prompt: str
+    secret: bool = False
+    required: bool = True
+    default: str = ""
 
 
 def get_provider(name: ProviderName | str, values: dict[str, str]) -> DnsProvider:

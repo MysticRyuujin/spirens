@@ -16,20 +16,22 @@ the hostnames, not the IP.
 from __future__ import annotations
 
 import json
+import os
 import socket
 import ssl
+import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Annotated
 
 import httpx
 import typer
 from rich.table import Table
 
-from spirens.core.config import SpirensConfig
-from spirens.ui.console import console, die
+from spirens.core.config import SpirensConfig, load_or_die
+from spirens.core.paths import find_repo_root
+from spirens.ui.console import console
 
 HELLO_CID = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
 
@@ -54,11 +56,6 @@ class HealthReport:
 
     def to_list(self) -> list[dict[str, str | bool]]:
         return [{"name": r.name, "passed": r.passed, "detail": r.detail} for r in self.results]
-
-    # Back-compat alias — callers that used the old (misleading) name keep
-    # working. Prefer ``to_list`` in new code; it honestly describes the
-    # return shape.
-    to_dict = to_list
 
 
 @contextmanager
@@ -103,15 +100,6 @@ def _managed_hosts(config: SpirensConfig) -> set[str]:
     return {h for h in hosts if h}
 
 
-def _find_repo_root() -> Path:
-    p = Path.cwd()
-    while p != p.parent:
-        if (p / "compose").is_dir() and (p / ".env.example").is_file():
-            return p
-        p = p.parent
-    return Path.cwd()
-
-
 def _check_http(
     report: HealthReport,
     label: str,
@@ -142,6 +130,24 @@ def _check_http(
         return None
 
 
+def _decode_unverified_cert(der: bytes) -> dict[str, object]:
+    """Decode a DER cert into the dict form ``getpeercert()`` returns.
+
+    Unverified SSLContexts don't populate that dict form directly, so we
+    round-trip through PEM + ``ssl._ssl._test_decode_cert`` (which needs a
+    filesystem path). Private API, but the only in-stdlib way to inspect
+    issuer/expiry without hauling in a heavy X.509 dependency.
+    """
+    pem = ssl.DER_cert_to_PEM_cert(der)
+    with tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False) as fh:
+        fh.write(pem)
+        path = fh.name
+    try:
+        return ssl._ssl._test_decode_cert(path)  # type: ignore[attr-defined, no-any-return]
+    finally:
+        os.unlink(path)
+
+
 def _check_cert(report: HealthReport, host: str, *, verify: bool = True) -> None:
     """Check TLS certificate validity. When ``verify`` is False we still
     record the issuer/expiry, just without requiring a trusted root —
@@ -153,30 +159,21 @@ def _check_cert(report: HealthReport, host: str, *, verify: bool = True) -> None
             socket.create_connection((host, 443), timeout=10) as sock,
             ctx.wrap_socket(sock, server_hostname=host) as ssock,
         ):
-            # getpeercert() returns {} on unverified contexts; use the DER
-            # form and parse ourselves when that's the case.
-            cert = ssock.getpeercert() or ssock.getpeercert(binary_form=False)
-            if not cert:
+            cert: dict[str, object] | None = ssock.getpeercert() or None  # type: ignore[assignment]
+            if cert is None:
                 der = ssock.getpeercert(binary_form=True)
                 if der is None:
                     report.add(f"cert {host}", False, "no cert returned")
                     return
-                # Unverified context doesn't populate the dict form; decode
-                # via a tempfile so ssl._ssl._test_decode_cert can parse it.
-                import tempfile
-
-                pem = ssl.DER_cert_to_PEM_cert(der)
-                with tempfile.NamedTemporaryFile("w", suffix=".pem", delete=False) as fh:
-                    fh.write(pem)
-                    path = fh.name
-                try:
-                    cert = ssl._ssl._test_decode_cert(path)  # type: ignore[attr-defined]
-                finally:
-                    import os
-
-                    os.unlink(path)
-            assert cert is not None
-            issuer = dict(x[0] for x in cert.get("issuer", []))  # type: ignore[misc]
+                cert = _decode_unverified_cert(der)
+            # ``issuer`` is a tuple of tuples of (key, value) pairs — flatten
+            # to a dict. Typed loosely because the private API path returns
+            # plain ``dict[str, object]``; the stdlib-shape TypedDict gets
+            # discarded by that branch.
+            issuer: dict[str, str] = dict(
+                x[0]  # type: ignore[misc]
+                for x in cert.get("issuer", ())  # type: ignore[attr-defined]
+            )
             not_after = cert.get("notAfter", "unknown")
             org = issuer.get("organizationName", issuer.get("commonName", "unknown"))
             report.add(f"cert {host}", True, f"{org} (expires {not_after})")
@@ -292,17 +289,7 @@ def health(
     ] = False,
 ) -> None:
     """Check all public SPIRENS endpoints."""
-    repo_root = _find_repo_root()
-    env_path = repo_root / ".env"
-
-    if not env_path.exists():
-        die("no .env found")
-
-    try:
-        config = SpirensConfig.from_env_file(env_path)
-    except Exception as exc:
-        die(f".env validation failed: {exc}")
-        return
+    config = load_or_die(find_repo_root() / ".env")
 
     # Default --host for internal profile: Traefik is bound to 0.0.0.0:443
     # on the VM, so health running on the VM can hit it via loopback.
@@ -343,7 +330,7 @@ def health(
             console.print("\n[bold green]All checks passed.[/bold green]")
         else:
             console.print(
-                "\n[bold red]One or more checks failed.[/bold red]  See docs/09-troubleshooting.md",
+                "\n[bold red]One or more checks failed.[/bold red]  See docs/10-troubleshooting.md",
                 style="red",
             )
             raise typer.Exit(1)

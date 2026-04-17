@@ -152,7 +152,7 @@ class SetupWizard:
         console.print(
             "  How will clients reach your SPIRENS services?\n"
             "  See [link=https://mysticryuujin.github.io/spirens/10-deployment-profiles/]"
-            "docs/10-deployment-profiles.md[/link] for details.\n"
+            "docs/04-deployment-profiles.md[/link] for details.\n"
         )
 
         choices = [

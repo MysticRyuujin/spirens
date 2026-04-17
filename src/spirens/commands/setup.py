@@ -12,16 +12,8 @@ from typing import Annotated
 import typer
 from dotenv import dotenv_values
 
+from spirens.core.paths import find_repo_root
 from spirens.ui.wizard import SetupWizard
-
-
-def _find_repo_root() -> Path:
-    p = Path.cwd()
-    while p != p.parent:
-        if (p / "compose").is_dir() and (p / ".env.example").is_file():
-            return p
-        p = p.parent
-    return Path.cwd()
 
 
 def setup(
@@ -31,9 +23,8 @@ def setup(
     ] = None,
 ) -> None:
     """Interactive setup wizard — creates .env and dashboard credentials."""
-    repo_root = _find_repo_root()
+    repo_root = find_repo_root()
 
-    # Pre-fill from existing .env if present
     existing: dict[str, str] = {}
     env_path = Path(env_file) if env_file else repo_root / ".env"
     if env_path.exists():

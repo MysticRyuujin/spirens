@@ -30,12 +30,6 @@ class TestHealthReport:
         assert data[0]["passed"] is True
         assert data[0]["detail"] == "200"
 
-    def test_to_dict_is_alias_of_to_list(self) -> None:
-        # Back-compat: external code that called to_dict keeps working.
-        report = HealthReport()
-        report.add("a", True, "ok")
-        assert report.to_dict() == report.to_list()
-
     def test_empty_report_passes(self) -> None:
         report = HealthReport()
         assert report.all_passed is True

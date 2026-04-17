@@ -23,19 +23,25 @@ def generate_redis_password(length: int = 48) -> str:
 
 
 def set_redis_password(env_path: Path, password: str) -> None:
-    """Write a generated REDIS_PASSWORD into the .env file."""
-    lines = env_path.read_text().splitlines(keepends=True)
+    """Write a generated REDIS_PASSWORD into the .env file.
+
+    Replaces an existing ``REDIS_PASSWORD=`` line in place; appends one
+    if the key is absent so a hand-edited .env that dropped the line
+    recovers without a manual edit.
+    """
+    original = env_path.read_text()
+    replaced: list[str] = []
     found = False
-    with env_path.open("w") as f:
-        for line in lines:
-            if line.startswith("REDIS_PASSWORD="):
-                f.write(f"REDIS_PASSWORD={password}\n")
-                found = True
-            else:
-                f.write(line)
+    for line in original.splitlines(keepends=True):
+        if line.startswith("REDIS_PASSWORD="):
+            replaced.append(f"REDIS_PASSWORD={password}\n")
+            found = True
+        else:
+            replaced.append(line)
     if not found:
-        with env_path.open("a") as f:
-            f.write(f"\nREDIS_PASSWORD={password}\n")
+        prefix = "" if original.endswith("\n") or not original else "\n"
+        replaced.append(f"{prefix}REDIS_PASSWORD={password}\n")
+    env_path.write_text("".join(replaced))
 
 
 def ensure_redis_password(config: SpirensConfig, env_path: Path) -> str:

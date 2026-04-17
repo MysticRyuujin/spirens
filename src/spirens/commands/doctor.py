@@ -17,16 +17,8 @@ from rich.table import Table
 
 from spirens.core.config import SpirensConfig
 from spirens.core.dns import DnsProviderError, get_provider
+from spirens.core.paths import find_repo_root
 from spirens.ui.console import console
-
-
-def _find_repo_root() -> Path:
-    p = Path.cwd()
-    while p != p.parent:
-        if (p / "compose").is_dir() and (p / ".env.example").is_file():
-            return p
-        p = p.parent
-    return Path.cwd()
 
 
 def _version_tuple(version_str: str) -> tuple[int, ...]:
@@ -198,12 +190,7 @@ def _check_dns_token(repo_root: Path) -> tuple[bool, str]:
     except Exception:
         return False, ".env invalid"
     try:
-        values = {
-            "CF_API_EMAIL": config.cf_api_email,
-            "CF_DNS_API_TOKEN": config.cf_dns_api_token,
-            "DO_AUTH_TOKEN": config.do_auth_token,
-        }
-        with get_provider(config.dns_provider, values) as provider:
+        with get_provider(config.dns_provider, config.provider_credentials) as provider:
             result = provider.validate_credentials(config.base_domain)
         return True, f"{config.dns_provider}: {result}"
     except DnsProviderError as exc:
@@ -212,7 +199,7 @@ def _check_dns_token(repo_root: Path) -> tuple[bool, str]:
 
 def doctor() -> None:
     """Diagnose common SPIRENS setup problems."""
-    repo_root = _find_repo_root()
+    repo_root = find_repo_root()
 
     checks: list[tuple[str, tuple[bool, str], str]] = []
 

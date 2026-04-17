@@ -106,6 +106,19 @@ class SpirensConfig(BaseModel):
             return self.do_auth_token
         return ""
 
+    @property
+    def provider_credentials(self) -> dict[str, str]:
+        """Credential dict in the shape the DNS provider factory expects.
+
+        Consolidated here so bootstrap / doctor / cleanup-acme don't each
+        re-derive the same three-key mapping.
+        """
+        return {
+            "CF_API_EMAIL": self.cf_api_email,
+            "CF_DNS_API_TOKEN": self.cf_dns_api_token,
+            "DO_AUTH_TOKEN": self.do_auth_token,
+        }
+
     @classmethod
     def from_env_file(cls, path: Path) -> SpirensConfig:
         """Load and validate a .env file.
@@ -116,10 +129,22 @@ class SpirensConfig(BaseModel):
         """
         raw = dotenv_values(path, interpolate=True)
         # Map ENV_VAR names to lowercase pydantic field names.
-        mapped: dict[str, str] = {}
-        for key, value in raw.items():
-            if value is None:
-                continue
-            field_name = key.lower()
-            mapped[field_name] = value
+        mapped = {key.lower(): value for key, value in raw.items() if value is not None}
         return cls(**mapped)
+
+
+def load_or_die(env_path: Path) -> SpirensConfig:
+    """Load ``env_path`` or exit with a user-facing error.
+
+    Every command starts with the same three-liner — check for .env,
+    parse it, print a friendly error on failure. Consolidating removes
+    that duplication and centralises the exit message wording.
+    """
+    from spirens.ui.console import die
+
+    if not env_path.exists():
+        die(f"no .env found at {env_path} — run `spirens setup` or copy .env.example to .env")
+    try:
+        return SpirensConfig.from_env_file(env_path)
+    except Exception as exc:
+        die(f".env validation failed: {exc}")

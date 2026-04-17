@@ -7,27 +7,20 @@ docker compose up / docker stack deploy, wait for Kubo, configure-ipfs.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from spirens.core.config import SpirensConfig
+from spirens.commands.bootstrap import bootstrap as _bootstrap
+from spirens.core.config import SpirensConfig, load_or_die
 from spirens.core.env import build_env
+from spirens.core.erpc_config import render as render_erpc
 from spirens.core.hostname_map import encode_hostname_map
 from spirens.core.ipfs import KuboClient
+from spirens.core.paths import find_repo_root
 from spirens.core.runner import CommandRunner
 from spirens.core.topology import Topology, get_runner
 from spirens.ui.console import die, log
-
-
-def _find_repo_root() -> Path:
-    p = Path.cwd()
-    while p != p.parent:
-        if (p / "compose").is_dir() and (p / ".env.example").is_file():
-            return p
-        p = p.parent
-    return Path.cwd()
 
 
 def up(
@@ -47,28 +40,20 @@ def up(
     ] = False,
 ) -> None:
     """Bring the SPIRENS stack up."""
-    repo_root = _find_repo_root()
+    repo_root = find_repo_root()
     runner = CommandRunner(dry_run=dry_run)
     env_path = repo_root / ".env"
 
     if not env_path.exists():
         die("no .env found — copy .env.example to .env and fill it in")
 
-    # 1. Bootstrap
     if not skip_bootstrap:
         log("bootstrap")
-        from spirens.commands.bootstrap import bootstrap as _bootstrap
-
         _bootstrap(swarm=(topology is Topology.SWARM), dry_run=dry_run)
 
-    # 2. Load config (after bootstrap may have generated REDIS_PASSWORD)
-    try:
-        config = SpirensConfig.from_env_file(env_path)
-    except Exception as exc:
-        die(f".env validation failed: {exc}")
-        return
+    # Load after bootstrap, which may have just generated REDIS_PASSWORD.
+    config = load_or_die(env_path)
 
-    # 3. Encode hostname-map + render env-gated config files
     log("encoding dweb-proxy hostname-map")
     limo_config = encode_hostname_map(config.dweb_eth_host, repo_root)
 
@@ -77,58 +62,60 @@ def up(
     # an empty endpoint. Compose mounts the generated file, not the
     # committed template.
     if not dry_run:
-        from spirens.core.erpc_config import render as render_erpc
-
         render_erpc(repo_root, config)
 
-    # 4. Build full environment (with derived vars)
     env = build_env(config, env_path)
     env["LIMO_HOSTNAME_SUBSTITUTION_CONFIG"] = limo_config
-
-    # Merge into os.environ so docker compose picks them up
     full_env = {**os.environ, **env}
 
-    # 5. Bring up the stack
     stack = get_runner(topology, runner, repo_root)
     stack.up(services=service, env=full_env)
 
-    # 6. Post-deploy: wait for Kubo, then configure it
-    if not skip_configure_ipfs and (service is None or "ipfs" in (service or [])):
-        kubo = KuboClient()
-        log("waiting for Kubo API...")
-        if not dry_run:
-            # Swarm schedules services asynchronously — image pulls, task
-            # placement, and container startup can take minutes on a cold
-            # run. Single-host brings containers up synchronously via
-            # `compose up -d`, so 36s is plenty there. Give swarm a 5m
-            # budget instead.
-            kubo_timeout = 300 if topology is Topology.SWARM else 36
-            if not kubo.wait_healthy(timeout=kubo_timeout):
-                log_hint = (
-                    "docker service logs spirens-ipfs_ipfs"
-                    if topology is Topology.SWARM
-                    else "docker logs spirens-ipfs"
-                )
-                die(f"Kubo didn't come up after {kubo_timeout}s — check '{log_hint}'")
-            log("Kubo API healthy")
+    if skip_configure_ipfs or (service is not None and "ipfs" not in service):
+        log("up complete")
+        _print_next_steps(config, dry_run)
+        return
 
-        log("applying Kubo config (CORS, gateway, .eth DoH)")
-        doh_url = (
-            f"https://{config.dweb_resolver_host}/dns-query" if config.dweb_resolver_host else None
-        )
-        kubo.apply_spirens_config(config.ipfs_gateway_host, doh_url, runner=runner)
+    kubo = KuboClient()
+    log("waiting for Kubo API...")
+    if not dry_run:
+        # Swarm schedules services asynchronously — image pulls, task
+        # placement, and container startup can take minutes on a cold
+        # run. Single-host brings containers up synchronously via
+        # `compose up -d`, so 36s is plenty there. Give swarm a 5m
+        # budget instead.
+        kubo_timeout = 300 if topology is Topology.SWARM else 36
+        if not kubo.wait_healthy(timeout=kubo_timeout):
+            log_hint = (
+                "docker service logs spirens-ipfs_ipfs"
+                if topology is Topology.SWARM
+                else "docker logs spirens-ipfs"
+            )
+            die(f"Kubo didn't come up after {kubo_timeout}s — check '{log_hint}'")
+        log("Kubo API healthy")
 
-        # Gateway.PublicGateways (and DNS.Resolvers) are read at Kubo startup;
-        # a live-written change via /api/v0/config persists but doesn't apply
-        # until restart. Without this restart, {cid}.ipfs.$BASE requests hit
-        # Kubo but return 404 because the subdomain-gateway routing table
-        # was built before our config write landed.
-        if not dry_run:
-            kubo.restart_container(runner=runner)
+    log("applying Kubo config (CORS, gateway, .eth DoH)")
+    doh_url = (
+        f"https://{config.dweb_resolver_host}/dns-query" if config.dweb_resolver_host else None
+    )
+    kubo.apply_spirens_config(config.ipfs_gateway_host, doh_url, runner=runner)
+
+    # Gateway.PublicGateways (and DNS.Resolvers) are read at Kubo startup;
+    # a live-written change via /api/v0/config persists but doesn't apply
+    # until restart. Without this restart, {cid}.ipfs.$BASE requests hit
+    # Kubo but return 404 because the subdomain-gateway routing table
+    # was built before our config write landed.
+    if not dry_run:
+        kubo.restart_container(runner=runner)
 
     log("up complete")
-    if not dry_run:
-        typer.echo(f"""
+    _print_next_steps(config, dry_run)
+
+
+def _print_next_steps(config: SpirensConfig, dry_run: bool) -> None:
+    if dry_run:
+        return
+    typer.echo(f"""
   Next: wait ~60s for Let's Encrypt to issue certs on first boot, then:
 
     spirens health
