@@ -17,6 +17,7 @@ from tests.e2e.phases import (  # noqa: F401
     p09_public_endpoints,
     p14_ddns_module,
     p15_dns_sync_module,
+    p16_down_single_for_swarm,
     p17_swarm_bootstrap,
     p18_up_swarm,
     p19_swarm_health,
