@@ -58,9 +58,7 @@ class TestErpcRender:
         assert "# spirens:local_node:begin" not in text
         assert "# spirens:local_node:end" not in text
 
-    def test_strips_local_node_block_when_eth_local_url_is_empty(
-        self, tmp_path: Path
-    ) -> None:
+    def test_strips_local_node_block_when_eth_local_url_is_empty(self, tmp_path: Path) -> None:
         repo = _repo_with_template(tmp_path)
         cfg = _config(tmp_path, eth_local_url="")
         out = render(repo, cfg)

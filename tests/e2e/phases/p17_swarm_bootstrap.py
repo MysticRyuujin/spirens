@@ -11,60 +11,19 @@ during ``dockerd`` restart). For the duration of the swarm run we
 toggle it off and stash the original for phase 20 to restore. This is
 scoped to the E2E harness — production operators should decide
 deliberately; ``spirens doctor`` will grow a warning for this combo.
+The same toggle also runs on the worker in phase 17b.
 """
 
 from __future__ import annotations
 
-import json
-
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
-from tests.e2e.harness.ssh import sudo_bash_lc, sudo_run
-
-DAEMON_JSON = "/etc/docker/daemon.json"
-BACKUP = "/etc/docker/daemon.json.spirens-e2e-backup"
-
-
-def _disable_live_restore_if_set(ctx: Context) -> None:
-    """If daemon.json has live-restore: true, turn it off and reload dockerd.
-
-    Saves the original at ``BACKUP`` so phase 20 can undo the change.
-    If the file doesn't exist, doesn't touch it. Safe to re-run.
-
-    ``cp`` into ``/etc/`` and rewriting ``daemon.json`` both require
-    root, so those steps use ``sudo_run`` / ``sudo_bash_lc``. On cloud
-    VMs with a non-root default user this relies on passwordless sudo
-    (standard for Azure azureuser, AWS ubuntu, etc.).
-    """
-    # Check whether daemon.json has live-restore set. Readable without
-    # sudo on default installs (0644 root:root), so plain ssh_run is
-    # enough; capture=True keeps registry-mirror URLs out of stdout.
-    r = ssh_run(ctx.env, ["cat", DAEMON_JSON], capture=True, check=False)
-    if r.returncode != 0:
-        print(f"no {DAEMON_JSON} — swarm-init will use defaults")
-        return
-    try:
-        cfg = json.loads(r.stdout)
-    except json.JSONDecodeError as exc:
-        print(f"! {DAEMON_JSON} is not valid JSON: {exc} — proceeding without toggle")
-        return
-
-    if not cfg.get("live-restore"):
-        return  # already off / absent
-
-    print("daemon.json has live-restore=true — temporarily disabling for swarm")
-    sudo_run(ctx.env, ["cp", "-a", DAEMON_JSON, BACKUP])
-    cfg["live-restore"] = False
-    new = json.dumps(cfg, indent=2)
-    # Heredoc write — elevated so the shell's > redirection can clobber
-    # a root-owned file in /etc/.
-    sudo_bash_lc(ctx.env, f"cat > {DAEMON_JSON} <<'EOF'\n{new}\nEOF")
-    sudo_run(ctx.env, ["systemctl", "reload", "docker"])
+from tests.e2e.harness.swarm import disable_live_restore_if_set
 
 
 @phase("17_swarm_bootstrap")
 def swarm_bootstrap(ctx: Context) -> None:
-    _disable_live_restore_if_set(ctx)
+    disable_live_restore_if_set(ctx)
 
     info = ssh_run(
         ctx.env, ["docker", "info", "--format", "{{.Swarm.LocalNodeState}}"], capture=True
@@ -72,19 +31,25 @@ def swarm_bootstrap(ctx: Context) -> None:
     state = info.stdout.strip()
     if state != "active":
         # --advertise-addr binds the raft/overlay gossip to the LAN IP so
-        # workers on other hosts could join; for one-node E2E it mostly
-        # just silences Docker's "which interface?" warning.
+        # workers on other hosts can join; also silences Docker's
+        # "which interface?" warning.
         ssh_run(ctx.env, ["docker", "swarm", "init", f"--advertise-addr={ctx.env.ip}"])
     else:
         print("swarm already active on this node — skipping init")
 
     # stack.ipfs.yml pins the IPFS replica to nodes labelled `ipfs=true`
     # because the datastore isn't meant to migrate between hosts. On a
-    # one-node test swarm we label the lone node so the replica schedules.
-    # In production operators label their chosen IPFS host explicitly.
+    # fresh swarm we label the manager so the replica schedules on
+    # up_swarm. Phase 19a may later move this label to a worker to
+    # exercise placement migration. In production operators label their
+    # chosen IPFS host explicitly.
     ssh_run(
         ctx.env,
-        ["bash", "-lc", "docker node update --label-add ipfs=true $(docker node ls -q)"],
+        [
+            "bash",
+            "-lc",
+            "docker node update --label-add ipfs=true $(docker node ls -q --filter role=manager)",
+        ],
     )
 
     remote_repo = ctx.env.remote_repo

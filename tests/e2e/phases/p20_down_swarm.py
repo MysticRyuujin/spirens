@@ -4,33 +4,68 @@ Mirror of phase 16 (down_single) for the swarm topology. ``swarm leave
 --force`` returns the node to standalone mode so a subsequent single-host
 run on the same VM isn't confused by a still-active swarm manager.
 
-If phase 17 stashed a pre-test ``daemon.json`` (live-restore toggle),
-restore it here so the host's Docker daemon returns to its intended
-configuration.
+When a worker VM is configured, we drain + ``node rm`` it from the
+manager first so the manager's raft state is clean, then tell the
+worker to ``swarm leave --force`` too. Skipping the node-rm on the
+manager is what leaves zombie ``Down`` nodes in ``docker node ls`` on
+the next run.
+
+If phase 17 (or 17b) stashed a pre-test ``daemon.json`` (live-restore
+toggle), restore it here so both hosts' Docker daemons return to their
+intended configuration.
 """
 
 from __future__ import annotations
 
 from tests.e2e.harness.phases import Context, phase
 from tests.e2e.harness.ssh import run as ssh_run
-from tests.e2e.harness.ssh import sudo_run
-
-DAEMON_JSON = "/etc/docker/daemon.json"
-BACKUP = "/etc/docker/daemon.json.spirens-e2e-backup"
+from tests.e2e.harness.swarm import restore_daemon_json
 
 
-def _restore_daemon_json(ctx: Context) -> None:
-    r = ssh_run(ctx.env, ["test", "-f", BACKUP], check=False)
-    if r.returncode != 0:
+def _remove_worker(ctx: Context) -> None:
+    """Drain + rm the worker on the manager, then force-leave on the worker.
+
+    Tolerant: every step is best-effort. A fresh VM or a swarm that
+    never got a worker still runs this phase cleanly.
+    """
+    if not ctx.env.has_worker:
         return
-    print(f"restoring original {DAEMON_JSON} (live-restore toggle from phase 17)")
-    # mv + systemctl both need root.
-    sudo_run(ctx.env, ["mv", BACKUP, DAEMON_JSON])
-    sudo_run(ctx.env, ["systemctl", "reload", "docker"])
+
+    # Find the worker node id by its status-addr. If it's not registered
+    # with this manager (e.g. never joined), silently skip.
+    r = ssh_run(ctx.env, ["docker", "node", "ls", "--format", "{{.ID}}"], capture=True, check=False)
+    worker_id = ""
+    for node_id in (line.strip() for line in r.stdout.splitlines()):
+        if not node_id:
+            continue
+        ins = ssh_run(
+            ctx.env,
+            ["docker", "node", "inspect", "--format", "{{.Status.Addr}}", node_id],
+            capture=True,
+            check=False,
+        )
+        if ins.stdout.strip() == ctx.env.worker_ip:
+            worker_id = node_id
+            break
+
+    if worker_id:
+        print(f"draining + removing worker {worker_id} ({ctx.env.worker_ip})")
+        ssh_run(
+            ctx.env,
+            ["docker", "node", "update", "--availability", "drain", worker_id],
+            check=False,
+        )
+        ssh_run(ctx.env, ["docker", "node", "rm", "--force", worker_id], check=False)
+
+    # Independent of whether the manager still knew about the worker:
+    # force the worker itself to leave. Idempotent when already out.
+    ssh_run(ctx.env, ["docker", "swarm", "leave", "--force"], worker=True, check=False)
 
 
 @phase("20_down_swarm")
 def down_swarm(ctx: Context) -> None:
+    _remove_worker(ctx)
+
     ssh_run(
         ctx.env,
         [
@@ -39,8 +74,10 @@ def down_swarm(ctx: Context) -> None:
             f"cd {ctx.env.remote_repo} && .venv/bin/spirens down swarm --volumes --yes",
         ],
     )
-    # Drop the node back to standalone mode — makes the VM ready for a
+    # Drop the manager back to standalone mode — makes the VM ready for a
     # single-host pass without reboot.
     ssh_run(ctx.env, ["docker", "swarm", "leave", "--force"], check=False)
 
-    _restore_daemon_json(ctx)
+    restore_daemon_json(ctx)
+    if ctx.env.has_worker:
+        restore_daemon_json(ctx, worker=True)

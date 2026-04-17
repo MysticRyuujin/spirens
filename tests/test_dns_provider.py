@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import httpx
 import pytest
 
@@ -61,7 +63,9 @@ class TestCloudflareTxtOps:
     DELETE shape.
     """
 
-    def _mock_provider(self, handler) -> CloudflareProvider:
+    def _mock_provider(
+        self, handler: Callable[[httpx.Request], httpx.Response]
+    ) -> CloudflareProvider:
         # Build a provider whose httpx client uses a MockTransport we control.
         p = CloudflareProvider(token="tok", email="a@b.c")
         p._client.close()

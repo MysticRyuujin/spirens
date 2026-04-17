@@ -25,7 +25,7 @@ import subprocess
 import time
 from pathlib import Path
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from tests.e2e.harness import cloudflare as cf
 from tests.e2e.harness.phases import Context, phase
 
@@ -227,5 +227,5 @@ def public_dns_preflight(ctx: Context) -> None:
                 f"authoritative NS within {PROPAGATION_TIMEOUT_S:.0f}s"
             )
     grey = sum(1 for _, e in targets if e is not None)
-    proxied = len(targets) - grey
-    print(f"DNS propagation confirmed: {grey} grey-cloud + {proxied} proxied records")
+    proxied_count = len(targets) - grey
+    print(f"DNS propagation confirmed: {grey} grey-cloud + {proxied_count} proxied records")

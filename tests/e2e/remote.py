@@ -121,7 +121,7 @@ def cmd_clean(env: TestEnv, _args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
+def cmd_bootstrap_host(env: TestEnv, args: argparse.Namespace) -> int:
     """Install uv, Python 3.14, and Docker on a fresh Ubuntu snapshot.
 
     Idempotent — each step guards on a `command -v` or `uv python list`
@@ -133,8 +133,28 @@ def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
     runs, docker install + systemctl + adding the user to the ``docker``
     group all elevate via sudo; uv installs to ``~/.local/bin`` and
     never needs root.
+
+    ``--worker`` targets the worker VM instead of the manager, for
+    multi-node swarm setups. The worker only needs uv + python for its
+    pytest smoke (optional) and docker (required); the shape is the same.
     """
     from tests.e2e.harness.ssh import sudo_bash_lc
+
+    worker = bool(getattr(args, "worker", False))
+    if worker:
+        if not env.has_worker:
+            print(
+                "!! --worker requested but SPIRENS_TEST_WORKER_IP is empty",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"[bootstrap-host] target: worker ({env.worker_user}@{env.worker_ip})")
+        user_for_group = env.worker_user
+        needs_usermod = env.worker_sudo
+    else:
+        print(f"[bootstrap-host] target: manager ({env.user}@{env.ip})")
+        user_for_group = env.user
+        needs_usermod = env.sudo
 
     # User-space steps (no sudo): uv + python 3.14.
     user_steps: list[tuple[str, str]] = [
@@ -151,7 +171,7 @@ def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
     ]
     for label, script in user_steps:
         print(f"\n--- {label} ---")
-        ssh_run(env, ["bash", "-lc", script])
+        ssh_run(env, ["bash", "-lc", script], worker=worker)
 
     # System-level steps (sudo on non-root). get.docker.com detects when
     # invoked as non-root and uses sudo internally — but we pass
@@ -163,17 +183,18 @@ def cmd_bootstrap_host(env: TestEnv, _args: argparse.Namespace) -> int:
         "command -v docker >/dev/null "
         "|| (curl -fsSL https://get.docker.com -o /tmp/get-docker.sh "
         "&& sh /tmp/get-docker.sh && rm -f /tmp/get-docker.sh)",
+        worker=worker,
     )
 
     print("\n--- docker service ---")
-    sudo_bash_lc(env, "systemctl enable --now docker")
+    sudo_bash_lc(env, "systemctl enable --now docker", worker=worker)
 
     # usermod -aG docker $USER: only meaningful for non-root. After this,
     # any *new* ssh session (the one that runs the next phase) will have
     # the docker group active and `docker ...` will work without sudo.
-    if env.sudo:
-        print(f"\n--- docker group (adding {env.user}) ---")
-        sudo_bash_lc(env, f"usermod -aG docker {env.user}")
+    if needs_usermod:
+        print(f"\n--- docker group (adding {user_for_group}) ---")
+        sudo_bash_lc(env, f"usermod -aG docker {user_for_group}", worker=worker)
         print(
             "  note: existing ssh sessions don't pick up the new group; "
             "subsequent harness phases open fresh sessions so they inherit it."
@@ -223,7 +244,14 @@ def main() -> int:
     p_shell.add_argument("command")
     sub.add_parser("acme-json")
     sub.add_parser("clean")
-    sub.add_parser("bootstrap-host", help="install uv, python 3.14, docker (idempotent)")
+    p_bootstrap = sub.add_parser(
+        "bootstrap-host", help="install uv, python 3.14, docker (idempotent)"
+    )
+    p_bootstrap.add_argument(
+        "--worker",
+        action="store_true",
+        help="target the worker VM (SPIRENS_TEST_WORKER_IP) instead of the manager",
+    )
     p_sync = sub.add_parser("sync")
     p_sync.add_argument("--no-delete", action="store_true")
 

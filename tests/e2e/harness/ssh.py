@@ -40,7 +40,9 @@ SSH_OPTS = (
 )
 
 
-def _dest(env: TestEnv) -> str:
+def _dest(env: TestEnv, *, worker: bool = False) -> str:
+    if worker:
+        return f"{env.worker_user}@{env.worker_ip}"
     return f"{env.user}@{env.ip}"
 
 
@@ -54,14 +56,18 @@ def run(
     *,
     check: bool = True,
     capture: bool = False,
+    worker: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``cmd`` on the VM over SSH. ``cmd`` can be a string or argv list.
 
     argv-list form is preferred — it round-trips through shlex.join so the
     remote shell sees a single properly-quoted command line.
+
+    ``worker=True`` targets the worker VM (for multi-node swarm phases);
+    default targets the manager/sole host.
     """
     remote = cmd if isinstance(cmd, str) else shlex.join(cmd)
-    argv = ["ssh", *SSH_OPTS, _dest(env), remote]
+    argv = ["ssh", *SSH_OPTS, _dest(env, worker=worker), remote]
     _echo(argv)
     return subprocess.run(argv, check=check, text=True, capture_output=capture)
 
@@ -72,6 +78,7 @@ def sudo_run(
     *,
     check: bool = True,
     capture: bool = False,
+    worker: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``cmd`` as root on the VM (via ``sudo -n`` on non-root users).
 
@@ -82,8 +89,9 @@ def sudo_run(
 
     On root sessions this is a no-op — ``cmd`` runs directly.
     """
-    wrapped: list[str] = ["sudo", "-n", *cmd] if env.sudo else list(cmd)
-    return run(env, wrapped, check=check, capture=capture)
+    needs_sudo = env.worker_sudo if worker else env.sudo
+    wrapped: list[str] = ["sudo", "-n", *cmd] if needs_sudo else list(cmd)
+    return run(env, wrapped, check=check, capture=capture, worker=worker)
 
 
 def sudo_bash_lc(
@@ -92,11 +100,12 @@ def sudo_bash_lc(
     *,
     check: bool = True,
     capture: bool = False,
+    worker: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``bash -lc <script>`` as root. Useful for heredocs and pipes
     where the elevation must cover the whole shell (e.g. redirections
     writing to ``/etc/docker/daemon.json``)."""
-    return sudo_run(env, ["bash", "-lc", script], check=check, capture=capture)
+    return sudo_run(env, ["bash", "-lc", script], check=check, capture=capture, worker=worker)
 
 
 def rsync_up(

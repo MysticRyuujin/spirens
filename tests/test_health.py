@@ -72,7 +72,7 @@ class TestResolveOverride:
             infos = socket.getaddrinfo("rpc.example.com", 80)
         assert infos
         # At least one returned address should be loopback.
-        assert any(addr[4][0].startswith("127.") for addr in infos)
+        assert any(str(addr[4][0]).startswith("127.") for addr in infos)
 
     def test_resolve_override_leaves_untracked_hosts_alone(self) -> None:
         # localhost is an easy reference — it resolves without the override

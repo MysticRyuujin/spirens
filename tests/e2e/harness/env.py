@@ -36,6 +36,14 @@ class TestEnv:
     # /home/<user>/spirens otherwise (overridable via SPIRENS_TEST_REMOTE_REPO)
     allow_le_prod: bool  # opt-in: let fixtures render with LE prod CA (default False)
 
+    # Optional worker VM for multi-node swarm tests. Empty strings mean
+    # "not configured" — the swarm phases that need a worker skip
+    # themselves when worker_ip is empty. Same user as the manager
+    # unless overridden.
+    worker_host: str
+    worker_ip: str
+    worker_user: str
+
     @property
     def sudo(self) -> bool:
         """True when remote commands need sudo elevation.
@@ -47,6 +55,25 @@ class TestEnv:
         they don't.
         """
         return self.user != "root"
+
+    @property
+    def has_worker(self) -> bool:
+        """True when a worker VM is configured. Multi-node swarm phases
+        short-circuit when this is False — they skip rather than fail so
+        a dev without a second VM can still run the full single-node
+        pass."""
+        return bool(self.worker_ip)
+
+    @property
+    def worker_sudo(self) -> bool:
+        return self.worker_user != "root"
+
+    @property
+    def worker_remote_repo(self) -> str:
+        """Where on the worker to rsync, same convention as the manager."""
+        if self.worker_user == "root":
+            return "/root/spirens"
+        return f"/home/{self.worker_user}/spirens"
 
 
 def _parse(path: Path) -> dict[str, str]:
@@ -102,6 +129,10 @@ def load() -> TestEnv:
     allow_le_prod_raw = raw.get("SPIRENS_TEST_ALLOW_LE_PROD", "").strip().lower()
     allow_le_prod = allow_le_prod_raw in ("1", "true", "yes", "on")
 
+    worker_host = raw.get("SPIRENS_TEST_WORKER_HOST", "").strip()
+    worker_ip = raw.get("SPIRENS_TEST_WORKER_IP", "").strip()
+    worker_user = raw.get("SPIRENS_TEST_WORKER_USER", "").strip() or user
+
     return TestEnv(
         host=req("SPIRENS_TEST_HOST"),
         ip=req("SPIRENS_TEST_IP"),
@@ -115,4 +146,7 @@ def load() -> TestEnv:
         public_ip=public_ip,
         remote_repo=remote_repo,
         allow_le_prod=allow_le_prod,
+        worker_host=worker_host,
+        worker_ip=worker_ip,
+        worker_user=worker_user,
     )

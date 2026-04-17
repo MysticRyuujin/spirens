@@ -9,6 +9,8 @@ silently. Everything here runs without a TTY.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from spirens.core.config import SpirensConfig
 from spirens.ui.wizard import build_env_content, build_hostname_defaults
 
@@ -61,7 +63,7 @@ def _minimal_cloudflare_values() -> dict[str, str]:
 
 
 class TestEnvContent:
-    def test_rendered_env_parses_as_valid_spirens_config(self, tmp_path) -> None:
+    def test_rendered_env_parses_as_valid_spirens_config(self, tmp_path: Path) -> None:
         """End-to-end property: whatever the wizard writes should
         survive the config-validation round-trip."""
         content = build_env_content(_minimal_cloudflare_values())
