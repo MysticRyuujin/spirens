@@ -1,0 +1,76 @@
+# =============================================================================
+#  Helios — trustless Ethereum light client (single-host)
+# =============================================================================
+#  Activate:
+#    cp compose.helios.yml.example compose.helios.yml
+#    $EDITOR ../../../.env            # set HELIOS_EXECUTION_RPC, HELIOS_CHECKPOINT,
+#                                     # and flip DWEB_ETH_RPC=http://helios:8545
+#    # then uncomment the include in compose/single-host/compose.yml
+#
+#  What this is:
+#    Helios is an Ethereum mainnet light client from a16z. It tracks the
+#    beacon chain, then verifies every eth_* RPC response via Merkle proofs
+#    against the state root of the latest verified block.
+#
+#    In SPIRENS, Helios sits between dweb-proxy and the execution RPC that
+#    resolves ENS contenthash reads. dweb-proxy → Helios → eRPC → upstreams.
+#    Result: the ENS resolution path is trustlessly verified, while the
+#    public rpc.* endpoint stays vanilla eRPC (fast, cached, not verified).
+#
+#    See docs/helios.md for the full architecture story, failure modes, and
+#    why we default this to off.
+#
+#  Requirements:
+#    - HELIOS_EXECUTION_RPC — URL of an Ethereum mainnet RPC that supports
+#      eth_getProof. Point at our own eRPC (http://erpc:8545/main/evm/1) only
+#      if you've configured at least one paid vendor (Alchemy / QuickNode /
+#      Infura) in config/erpc/erpc.yaml — the free public-endpoints provider
+#      does NOT reliably serve eth_getProof.
+#    - HELIOS_CHECKPOINT — weak-subjectivity checkpoint URL. This is the one
+#      trust root Helios has; pick a reputable community provider.
+# =============================================================================
+---
+services:
+  helios:
+    image: ghcr.io/a16z/helios:0.9.0
+    container_name: spirens-helios
+    restart: unless-stopped
+    stop_grace_period: 30s
+    volumes:
+      - helios_data:/data
+    environment:
+      # Helios reads flags from env or CLI; we use CLI below for clarity.
+      RUST_LOG: "info"
+    command:
+      - ethereum
+      - --network=mainnet
+      - --execution-rpc=${HELIOS_EXECUTION_RPC:?set HELIOS_EXECUTION_RPC in .env}
+      - --checkpoint=${HELIOS_CHECKPOINT:?set HELIOS_CHECKPOINT in .env}
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-port=8545
+      - --data-dir=/data
+    networks:
+      # backend-only: dweb-proxy and eRPC both live there. Helios never
+      # needs to be reachable from the public internet or from Traefik.
+      - backend
+    healthcheck:
+      # eth_chainId is a trivial call that still exercises the full
+      # verify path (Helios proves the chain ID from the latest header).
+      test:
+        - CMD-SHELL
+        - >-
+          wget -qO- --post-data='{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+          --header='Content-Type: application/json' http://127.0.0.1:8545 | grep -q '"result":"0x1"'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 2m
+
+volumes:
+  helios_data:
+    name: spirens_helios_data
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

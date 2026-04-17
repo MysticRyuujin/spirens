@@ -117,13 +117,13 @@ Read order for the docs:
 3. [`docs/02-dns-and-cloudflare.md`](../docs/02-dns-and-cloudflare.md) —
    every DNS record needed.
 4. [`docs/03-certificates.md`](../docs/03-certificates.md) — ACME setup.
-5. [`docs/04-traefik.md`](../docs/04-traefik.md) — reverse proxy.
-6. [`docs/06-erpc.md`](../docs/06-erpc.md) — JSON-RPC proxy.
-7. [`docs/07-ipfs.md`](../docs/07-ipfs.md) — Kubo + gateway.
-8. [`docs/08-dweb-proxy.md`](../docs/08-dweb-proxy.md) — ENS resolution.
-9. [`docs/10-deployment-profiles.md`](../docs/10-deployment-profiles.md) —
+5. [`docs/05-traefik.md`](../docs/05-traefik.md) — reverse proxy.
+6. [`docs/07-erpc.md`](../docs/07-erpc.md) — JSON-RPC proxy.
+7. [`docs/08-ipfs.md`](../docs/08-ipfs.md) — Kubo + gateway.
+8. [`docs/09-dweb-proxy.md`](../docs/09-dweb-proxy.md) — ENS resolution.
+9. [`docs/04-deployment-profiles.md`](../docs/04-deployment-profiles.md) —
    single-host vs Swarm vs multi-zone.
-10. [`docs/09-troubleshooting.md`](../docs/09-troubleshooting.md) — when
+10. [`docs/10-troubleshooting.md`](../docs/10-troubleshooting.md) — when
     things break.
 
 ## Skill index by failure mode

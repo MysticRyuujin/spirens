@@ -266,7 +266,7 @@ The sibling SPIRENS docs to reference while porting:
   the DNS record set nginx will need to serve.
 - [`docs/03-certificates.md`](../docs/03-certificates.md) — the cert
   topology (wildcards on each subdomain level).
-- [`docs/04-traefik.md`](../docs/04-traefik.md) — the routing topology
+- [`docs/05-traefik.md`](../docs/05-traefik.md) — the routing topology
   to port.
 
 ## Upstream references

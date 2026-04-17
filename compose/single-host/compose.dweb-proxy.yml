@@ -26,10 +26,14 @@ services:
     environment:
       LISTEN_PORT: "8080"
 
-      # Resolve ENS via our own eRPC endpoint. Use the internal Docker DNS
-      # name so dweb-proxy can reach eRPC regardless of whether
-      # `${ERPC_HOST}` has a public A record (internal profile doesn't).
-      ETH_RPC_ENDPOINT: "http://erpc:8545/main/evm/1"
+      # Resolve ENS via our own eRPC endpoint by default, OR via an opt-in
+      # Helios light client (see optional/compose.helios.yml). Flip this by
+      # setting DWEB_ETH_RPC in .env:
+      #   DWEB_ETH_RPC=http://helios:8545                 (trustless, opt-in)
+      #   DWEB_ETH_RPC=http://erpc:8545/main/evm/1        (default — fast, cached)
+      # Internal Docker DNS names work regardless of profile — the container
+      # doesn't need `${ERPC_HOST}` to have a public A record.
+      ETH_RPC_ENDPOINT: "${DWEB_ETH_RPC:-http://erpc:8545/main/evm/1}"
 
       # Public IPFS gateway; used in X-Content-Location headers sent to
       # clients. We point at the path-style gateway and disable subdomain

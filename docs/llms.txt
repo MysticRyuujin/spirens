@@ -1,0 +1,80 @@
+# SPIRENS
+
+> Sovereign Portal for IPFS Resolution via Ethereum Naming Services
+
+A turnkey, modular, educational reference for self-hosting a private Web3
+infrastructure stack. Brings up a JSON-RPC endpoint (eRPC), an IPFS/Kubo
+HTTP gateway, and an ENS-to-IPFS gateway (dweb-proxy) — all behind Traefik
+with wildcard TLS from Let's Encrypt (Cloudflare DNS-01).
+
+**Vibe-coded.** Contributions welcome; limited support.
+
+## Core services
+
+- `https://rpc.example.com` — eRPC JSON-RPC proxy (local-first + vendor fallback)
+- `https://ipfs.example.com` — Kubo HTTP gateway (subdomain gateway included)
+- `https://*.eth.example.com` — ENS → IPFS via dweb-proxy
+- `https://ens-resolver.example.com` — DoH endpoint for Kubo DNSLink resolution
+- `https://traefik.example.com` — Traefik dashboard (auth + IP allowlist)
+
+## Docs
+
+- [Architecture](https://mysticryuujin.github.io/spirens/00-overview/)
+- [Prerequisites](https://mysticryuujin.github.io/spirens/01-prerequisites/)
+- [DNS & Cloudflare](https://mysticryuujin.github.io/spirens/02-dns-and-cloudflare/)
+- [Certificates](https://mysticryuujin.github.io/spirens/03-certificates/)
+- [Deployment Profiles](https://mysticryuujin.github.io/spirens/04-deployment-profiles/)
+- [Traefik](https://mysticryuujin.github.io/spirens/05-traefik/)
+- [Ethereum Node](https://mysticryuujin.github.io/spirens/06-ethereum-node/)
+- [eRPC](https://mysticryuujin.github.io/spirens/07-erpc/)
+- [IPFS (Kubo)](https://mysticryuujin.github.io/spirens/08-ipfs/)
+- [dweb-proxy](https://mysticryuujin.github.io/spirens/09-dweb-proxy/)
+- [Troubleshooting](https://mysticryuujin.github.io/spirens/10-troubleshooting/)
+- [Swarm deployment](https://mysticryuujin.github.io/spirens/swarm/)
+- [Security](https://mysticryuujin.github.io/spirens/security/)
+- [Upgrading](https://mysticryuujin.github.io/spirens/upgrading/)
+- [CLI Reference](https://mysticryuujin.github.io/spirens/cli/)
+- [Claude Code skills](https://mysticryuujin.github.io/spirens/skills/)
+
+## Claude Code plugin (spirens-skills)
+
+15 short, triggerable skills that correct LLM blind spots on this stack.
+Install inside a Claude Code session:
+
+  /plugin marketplace add MysticRyuujin/spirens
+  /plugin install spirens-skills
+
+Skills by domain:
+
+- ship — end-to-end from bare domain to live RPC endpoint (fetch FIRST)
+- dns — records, TTL, CAA, propagation
+- cloudflare — proxy vs DNS-only, API token scoping
+- tls-acme — ACME protocol, DNS-01 vs HTTP-01, wildcards
+- lets-encrypt — chain of trust, 90-day renewals, ECDSA vs RSA
+- ipfs — Kubo, pinning, peering, DHT vs delegated routing
+- gateways — subdomain vs path, trusted vs trustless, origin isolation
+- ipns — mutable pointers, dnslink, republish interval
+- ens-resolution — ENS → contenthash → CID → gateway
+- traefik — routers/services/middlewares, ACME, file vs label provider
+- nginx — http/stream, TLS termination, certbot
+- caddy — automatic HTTPS, Caddyfile, on-demand TLS risks
+- erpc — finality-aware caching, hedging, failover
+- helios — a16z trustless light client, eth_getProof requirement, checkpoint trust
+- topology — single-host Compose vs Docker Swarm, overlay networks
+
+## Key files
+
+- README.md — quick start and module matrix
+- CLAUDE.md — contributor and AI agent guidelines
+- SKILL.md — skills table of contents
+- .claude-plugin/plugin.json — plugin manifest
+- config/erpc/erpc.yaml — eRPC MVP config (< 150 lines by design)
+- config/dns/records.yaml — machine-readable DNS record definitions
+- compose/single-host/ — Docker Compose topology
+- compose/swarm/ — Docker Swarm topology
+- src/spirens/ — Python CLI source
+
+## Repository
+
+https://github.com/MysticRyuujin/spirens
+License: GNU AGPL v3

@@ -1,4 +1,4 @@
-# 06 · eRPC
+# 07 · eRPC
 
 [eRPC](https://github.com/erpc/erpc) is a JSON-RPC proxy. Clients talk to
 one URL (`https://rpc.example.com/main/evm/1`) and eRPC handles the rest:
@@ -27,8 +27,8 @@ budget story across multiple vendors. Still useful.
 
 ## The MVP config, explained
 
-[`config/erpc/erpc.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/erpc/erpc.yaml) is ~100 lines. Here's
-what each section does:
+[`config/erpc/erpc.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/erpc/erpc.yaml) is under
+150 lines. Here's what each section does:
 
 ### `rateLimiters.budgets`
 
@@ -67,6 +67,15 @@ unadvertised rate limits, occasional gaps in method coverage. Fine for
 dev and first-boot; if you care about latency or a SLA, run your own
 node or a vendor.
 
+!!! warning "Using eRPC as an upstream for Helios? Paid vendors required."
+
+    If you've enabled the opt-in [Helios](helios.md) module and pointed
+    its `HELIOS_EXECUTION_RPC` at this eRPC instance, you must configure
+    at least one paid vendor upstream here. Helios calls `eth_getProof`
+    on every state read, and the free `repository` provider doesn't
+    serve it reliably — most of the endpoints in that rotation either
+    omit `eth_getProof` or rate-limit it aggressively.
+
 Optional upgrades (all commented out in the file):
 
 - **Your own node** — uncomment the `${ETH_LOCAL_URL}` block and set
@@ -74,6 +83,8 @@ Optional upgrades (all commented out in the file):
   the repository provider becomes a fallback.
 - **Paid vendors** — Alchemy / Ankr / Infura blocks with API-key env
   vars. Useful when you want guaranteed throughput on specific chains.
+- **Trustless light client** — front eRPC with [Helios](helios.md) for
+  the ENS resolution path (internal only; public `rpc.*` stays vanilla).
 
 ### Request routing
 
@@ -178,4 +189,4 @@ and scrape `http://localhost:4001/metrics`. SPIRENS doesn't ship a
 Prometheus stack in v1 — bring your own. eRPC's metrics format is
 documented at <https://docs.erpc.cloud/operation/monitoring>.
 
-Continue → [07 — IPFS](07-ipfs.md)
+Continue → [08 — IPFS](08-ipfs.md)

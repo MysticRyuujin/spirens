@@ -176,8 +176,9 @@ the same account key).
 SPIRENS uses LE via Traefik's built-in ACME client (lego-based) with
 DNS-01 on Cloudflare:
 
-- `config/traefik/traefik.yml` declares the `le` resolver pointed at
-  production. Swap `caServer` to the staging URL for debugging.
+- `compose/single-host/compose.traefik.yml` declares the `le` resolver
+  via CLI flags, pointed at LE production. Set `ACME_CA_SERVER` in `.env`
+  to the staging URL for debugging.
 - Certs and account are persisted in the `letsencrypt` Docker volume
   (`/letsencrypt/acme.json`).
 - The default keyType is EC256 (ECDSA P-256).

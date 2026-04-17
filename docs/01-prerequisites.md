@@ -40,17 +40,17 @@ One Linux box with:
 - Docker 24+ and Docker Compose v2 (`docker compose version` ≥ 2.20)
 - Public ingress on TCP 80 and 443 — only needed for the **public** deployment
   profile. Internal and tunnel profiles don't require inbound ports. See
-  [10 — Deployment Profiles](10-deployment-profiles.md).
+  [04 — Deployment Profiles](04-deployment-profiles.md).
 - 2 vCPU / 4 GB RAM / 40 GB SSD for the Core 4 without a local Ethereum node
 
 If you add a local Ethereum node on the same box, budget a separate volume:
 **4 TB NVMe + 16 GB RAM** is the comfortable floor. See
-[05 — Ethereum node](05-ethereum-node.md).
+[06 — Ethereum node](06-ethereum-node.md).
 
 ### Alternative: tunnels or internal-only
 
 If you can't (or don't want to) forward ports 80/443, see
-[10 — Deployment Profiles](10-deployment-profiles.md) for the **tunnel**
+[04 — Deployment Profiles](04-deployment-profiles.md) for the **tunnel**
 profile (Cloudflare Tunnel, Tailscale Funnel) and the **internal** profile
 (LAN-only, no public exposure).
 

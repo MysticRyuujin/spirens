@@ -87,7 +87,7 @@ node can resolve `.eth` names as if they were DNSLink.
 # Browser follows redirect. Subdomain gateway serves the CID.
 ```
 
-SPIRENS's implementation: [`docs/08-dweb-proxy.md`](../docs/08-dweb-proxy.md).
+SPIRENS's implementation: [`docs/09-dweb-proxy.md`](../docs/09-dweb-proxy.md).
 
 ## The DoH trick (DNSLink-over-ENS)
 
@@ -178,7 +178,7 @@ docker exec spirens-ipfs ipfs resolve /ipns/vitalik.eth
 
 ## Worked example: SPIRENS
 
-See [`docs/08-dweb-proxy.md`](../docs/08-dweb-proxy.md) for the full
+See [`docs/09-dweb-proxy.md`](../docs/09-dweb-proxy.md) for the full
 flow diagrams and Redis dependency explanation. Key files:
 
 - `config/dweb-proxy/hostname-map.json` — host-substitution map.

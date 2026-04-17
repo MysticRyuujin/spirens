@@ -215,7 +215,7 @@ intentionally ~150 lines (MVP). Key choices:
 - No Redis cache in MVP — add one from `optional/compose.redis.yml`
   and wire the eRPC `database` block to graduate.
 
-See [`docs/06-erpc.md`](../docs/06-erpc.md) for the walk-through and
+See [`docs/07-erpc.md`](../docs/07-erpc.md) for the walk-through and
 the "going further" pointers to upstream docs for tiers 4-7.
 
 ## Why eRPC over a naive "put nginx in front"

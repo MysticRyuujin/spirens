@@ -170,7 +170,7 @@ SPIRENS runs Kubo as a subdomain gateway:
   wildcards because CF wildcard proxy is ACM-paid
   (see [`cloudflare/SKILL.md`](../cloudflare/SKILL.md)).
 
-Details: [`docs/07-ipfs.md`](../docs/07-ipfs.md).
+Details: [`docs/08-ipfs.md`](../docs/08-ipfs.md).
 
 ## Upstream references
 

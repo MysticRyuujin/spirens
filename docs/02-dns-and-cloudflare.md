@@ -18,10 +18,10 @@ of the same content.
    [local DNS](#internal-deployments-local-dns) (router, Pi-hole, dnsmasq) pointing at your
    internal IP. No public A records needed.
 4. **Tunnel profile:** your tunnel provider manages routing. See
-   [10 — Deployment Profiles](10-deployment-profiles.md#profile-tunnel).
+   [04 — Deployment Profiles](04-deployment-profiles.md#profile-tunnel).
 
 Not sure which profile fits? See
-[10 — Deployment Profiles](10-deployment-profiles.md).
+[04 — Deployment Profiles](04-deployment-profiles.md).
 
 ## ACME DNS-01: the one thing everyone needs
 
@@ -97,7 +97,7 @@ to reconcile `config/dns/records.yaml` automatically.
 For the internal profile (and for internal-visibility records on any profile),
 configure your local DNS to resolve service hostnames to the SPIRENS host's
 internal IP. See
-[10 — Deployment Profiles: Internal](10-deployment-profiles.md#setting-up-local-dns)
+[04 — Deployment Profiles: Internal](04-deployment-profiles.md#setting-up-local-dns)
 for per-tool setup instructions (Pi-hole, OPNsense Unbound, dnsmasq,
 standalone Unbound).
 
@@ -130,7 +130,7 @@ to the internal IP (avoiding a hairpin through your public IP), configure both:
 LAN clients shortcut straight to the internal IP. Public clients go through
 Cloudflare to your public IP. Keep both in sync if your stack's IP changes.
 
-## Required Cloudflare zone setting: SSL/TLS mode = **Full**
+## Required Cloudflare SSL/TLS mode: Full
 
 If you proxy any records (the default for most of SPIRENS), set your
 Cloudflare zone's SSL/TLS encryption mode to **Full** (not "Flexible",
@@ -209,7 +209,7 @@ scope:
      domain name.
    - `Zone` → `Zone Settings` → `Edit` — **required on public
      deployments** that proxy records. The SSL/TLS mode setting
-     ([see above](#required-cloudflare-zone-setting-ssltls-mode-full))
+     ([see above](#required-cloudflare-ssltls-mode-full))
      lives under Zone Settings, and SPIRENS's bootstrap check verifies
      it's set to "Full". Without this scope you'll need to manage SSL
      mode manually in the CF dashboard.
@@ -248,8 +248,9 @@ Settings` → `Edit`
 ## Dynamic IP? Enable DDNS
 
 !!! note "Public profile only"
-DDNS is only relevant if your A records are at Cloudflare and your ISP
-assigns a dynamic public IP. Internal and tunnel profiles skip this.
+
+    DDNS is only relevant if your A records are at Cloudflare and your ISP
+    assigns a dynamic public IP. Internal and tunnel profiles skip this.
 
 Home labs typically get a dynamic public IP from their ISP. Cloudflare doesn't
 auto-detect that — you need something updating the A records.
@@ -284,8 +285,9 @@ when my IP rotates" edge cases.
 ## Bulk record creation: the `dns-sync` module
 
 !!! note "Public profile only"
-This module reconciles A records to Cloudflare. If your A records live in
-local DNS, this module doesn't apply.
+
+    This module reconciles A records to Cloudflare. If your A records live in
+    local DNS, this module doesn't apply.
 
 If creating a half-dozen records by hand in the Cloudflare dashboard is
 tedious (or you want GitOps over click-ops), include the `dns-sync` module:

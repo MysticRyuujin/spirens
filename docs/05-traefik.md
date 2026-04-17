@@ -1,4 +1,4 @@
-# 04 · Traefik
+# 05 · Traefik
 
 Traefik is the reverse proxy that sits in front of every SPIRENS service. It
 handles three things that every request touches:
@@ -119,4 +119,4 @@ If you want to expose another service through Traefik:
 3. Add `myapp` to [`config/dns/records.yaml`](https://github.com/MysticRyuujin/spirens/blob/main/config/dns/records.yaml) so
    DNS stays in sync.
 
-Continue → [05 — Ethereum node](05-ethereum-node.md)
+Continue → [06 — Ethereum node](06-ethereum-node.md)

@@ -14,6 +14,11 @@ other, and how traffic flows in the five common scenarios.
 | IPFS (Kubo) | `ipfs/kubo:latest`                    | Your content-addressed storage node, exposing an HTTP gateway and subdomain gateway.     |
 | dweb-proxy  | `ghcr.io/ethlimo/dweb-proxy-api:main` | Bridges ENS (`vitalik.eth`) to IPFS by resolving contenthash records via eRPC.           |
 
+**Optional:** [Helios](helios.md), a trustless Ethereum light client
+from a16z, can be inserted between dweb-proxy and eRPC to cryptographically
+verify every ENS contract read. Off by default; see the Helios doc for
+when to enable it.
+
 ## Docker networks
 
 Two external bridge networks keep the attack surface small:
@@ -63,6 +68,7 @@ client ──HTTPS──▶ vitalik.eth.example.com
                   └▶ Traefik   (wildcard cert *.eth.example.com)
                      └▶ dweb-proxy :8080
                         ├─ resolve vitalik.eth via eRPC (contenthash record)
+                        │    [or via Helios → eRPC if the light-client module is enabled]
                         └─ 301/302 ──▶ X-Content-Location: {cid}.ipfs.example.com
 client follows ─┘                              └─ (flow #3)
 ```
@@ -78,6 +84,27 @@ Kubo ──DoH──▶ ens-resolver.example.com/dns-query
 
 This is how `ipfs resolve /ipns/vitalik.eth` works from inside your Kubo node.
 
+## Two orthogonal choices: topology and profile
+
+Before going further, understand that SPIRENS asks you to make **two
+independent** decisions. Don't conflate them.
+
+| Axis         | Options                                   | What it controls                                              |
+| :----------- | :---------------------------------------- | :------------------------------------------------------------ |
+| **Topology** | `single-host` or `swarm`                  | How Docker orchestrates the containers                        |
+| **Profile**  | `internal`, `public`, or `tunnel`         | Where your DNS A records live and how external clients reach you |
+
+Any combination is valid. Some examples:
+
+|                     | Internal profile                       | Public profile                      | Tunnel profile                       |
+| :------------------ | :------------------------------------- | :---------------------------------- | :----------------------------------- |
+| **Single-host**     | Home NAS on LAN, one box                | Cheap VPS serving public endpoints  | Home lab behind CGNAT, cloudflared  |
+| **Swarm**           | Home lab across 3 Pis, LAN-only         | Two-node cluster with HA ingress    | Swarm cluster behind Tailscale Funnel |
+
+The full breakdown is in
+[04 — Deployment Profiles](04-deployment-profiles.md). The single-host vs
+swarm differences are below.
+
 ## Single-host vs Swarm
 
 Everything above describes the _service graph_, which is identical in both
@@ -91,10 +118,12 @@ topologies. The wiring differs in exactly these ways:
 | Deploy constraints | n/a                                | `deploy.placement.constraints`              |
 | Volume drivers     | local named volumes                | swap in NFS driver for shared state         |
 
-Pick **single-host** for getting started, a single VPS, or learning. Pick
-**swarm** when you have multiple hosts, want HA routing across managers, or
-need NFS-backed state for Traefik's ACME storage. `spirens up` supports
-both via the first positional argument.
+Pick **single-host** for getting started, a single VPS, or learning — one
+machine runs every container. Pick **swarm** when you have multiple hosts
+and want Traefik's routing mesh to load-balance across them, or need shared
+storage (NFS-backed) so a service's state (e.g. Traefik's `acme.json`) is
+available wherever the container lands. `spirens up` supports both via the
+first positional argument.
 
 ## Deployment scenarios
 
@@ -102,16 +131,17 @@ SPIRENS supports three deployment models: **internal** (LAN-only, no public
 exposure), **public** (VPS or dedicated server serving the internet), and
 **tunnel** (Cloudflare Tunnel or Tailscale Funnel, no inbound ports needed).
 The services and compose files are the same — only the DNS and network
-configuration differ. See [10 — Deployment Profiles](10-deployment-profiles.md).
+configuration differ. See [04 — Deployment Profiles](04-deployment-profiles.md).
 
 ## Where to next
 
 - [01 — Prerequisites](01-prerequisites.md)
 - [02 — DNS & Cloudflare](02-dns-and-cloudflare.md) ← **critical; read this before anything else touches your registrar**
 - [03 — Certificates](03-certificates.md)
-- [04 — Traefik](04-traefik.md)
-- [05 — Ethereum node](05-ethereum-node.md) ← **read before eRPC; the local-first story hinges on this**
-- [06 — eRPC](06-erpc.md)
-- [07 — IPFS](07-ipfs.md)
-- [08 — dweb-proxy](08-dweb-proxy.md)
-- [09 — Troubleshooting](09-troubleshooting.md)
+- [04 — Deployment Profiles](04-deployment-profiles.md) ← **read before Traefik; profile choice affects every later section**
+- [05 — Traefik](05-traefik.md)
+- [06 — Ethereum node](06-ethereum-node.md) ← **read before eRPC; the local-first story hinges on this**
+- [07 — eRPC](07-erpc.md)
+- [08 — IPFS](08-ipfs.md)
+- [09 — dweb-proxy](09-dweb-proxy.md)
+- [10 — Troubleshooting](10-troubleshooting.md)

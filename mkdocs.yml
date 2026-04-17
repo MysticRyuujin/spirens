@@ -40,15 +40,20 @@ nav:
       - Prerequisites: 01-prerequisites.md
       - DNS & Cloudflare: 02-dns-and-cloudflare.md
       - Certificates: 03-certificates.md
-      - Deployment Profiles: 10-deployment-profiles.md
+      - Deployment Profiles: 04-deployment-profiles.md
   - Services:
-      - Traefik: 04-traefik.md
-      - Ethereum Node: 05-ethereum-node.md
-      - eRPC: 06-erpc.md
-      - IPFS (Kubo): 07-ipfs.md
-      - dweb-proxy: 08-dweb-proxy.md
+      - Traefik: 05-traefik.md
+      - Ethereum Node: 06-ethereum-node.md
+      - Helios (trustless light client): helios.md
+      - eRPC: 07-erpc.md
+      - IPFS (Kubo): 08-ipfs.md
+      - dweb-proxy: 09-dweb-proxy.md
+  - Operations:
+      - Swarm deployment: swarm.md
+      - Security: security.md
+      - Upgrading: upgrading.md
   - CLI Reference: cli.md
-  - Troubleshooting: 09-troubleshooting.md
+  - Troubleshooting: 10-troubleshooting.md
   - Claude Code skills: skills.md
 
 validation:
@@ -79,6 +84,13 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+      # Use GitHub-style slugs so heading anchors match what markdownlint
+      # (MD051) expects. Default python-markdown slugify collapses
+      # consecutive hyphens; GitHub preserves them (e.g. "foo = bar"
+      # becomes "foo--bar", not "foo-bar"). Matching GitHub avoids a
+      # whole class of cross-tool anchor-link drift.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds: { case: lower }
   - attr_list
   - md_in_html
 

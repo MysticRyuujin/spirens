@@ -120,7 +120,7 @@ Peering:
 Kubo maintains connections to peered nodes regardless of normal peer
 churn. Use this between a pinning node and a gateway, or between geo-
 distributed gateways. See
-[`docs/07-ipfs.md`](../docs/07-ipfs.md#peering) for the SPIRENS pattern.
+[`docs/08-ipfs.md`](../docs/08-ipfs.md#peering) for the SPIRENS pattern.
 
 ## Routing: DHT vs delegated
 
@@ -221,7 +221,7 @@ SPIRENS runs Kubo as the `ipfs` service:
 
 - Subdomain gateway enabled on `ipfs.example.com` with wildcard for
   `*.ipfs.example.com`. See
-  [`docs/07-ipfs.md`](../docs/07-ipfs.md).
+  [`docs/08-ipfs.md`](../docs/08-ipfs.md).
 - `spirens configure-ipfs` applies the Kubo config via the local HTTP
   API (no container restart required).
 - Reprovider strategy, peering, and gateway config are opinionated —

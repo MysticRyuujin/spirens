@@ -64,10 +64,38 @@ ipfs.example.com {
 
 ## Wildcards — you need DNS-01
 
+The stock `caddy:2` image has HTTP-01 and TLS-ALPN-01 only. Wildcards
+need DNS-01, which needs a DNS provider plugin compiled into the
+binary. You have two choices:
+
+- **Pre-built binary** from `caddyserver.com/download?package=github.com%2Fcaddy-dns%2Fcloudflare`
+  (substitute the provider slug) and bake it into your own image, or
+- **Custom image via xcaddy** — preferred for Docker because the build
+  is reproducible and version-pinned with your image tag.
+
+### Custom image with xcaddy
+
+```dockerfile
+# Dockerfile
+FROM caddy:2-builder AS builder
+RUN xcaddy build \
+    --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2-alpine
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+```
+
+Add one `--with` line per provider plugin you need (e.g.
+`github.com/caddy-dns/digitalocean`, `github.com/caddy-dns/route53`).
+
+### Caddyfile
+
 ```caddy
 {
     # Global options block.
     acme_dns cloudflare {env.CF_DNS_API_TOKEN}
+    # Uncomment while iterating to avoid LE's 5-certs-per-week prod limit:
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 }
 
 *.ipfs.example.com, *.eth.example.com, *.ipns.example.com {
@@ -77,17 +105,67 @@ ipfs.example.com {
 }
 ```
 
-Required:
+The `CF_DNS_API_TOKEN` needs `Zone.DNS:Edit` + `Zone:Read` scope (see
+[`cloudflare/SKILL.md`](../cloudflare/SKILL.md)). Keep the staging-CA
+line commented out for production — its root isn't in the browser trust
+store, so clients will reject the certs.
 
-- A Caddy build with the `caddy-dns/cloudflare` module. Grab from
-  `https://caddyserver.com/download?package=github.com%2Fcaddy-dns%2Fcloudflare`
-  or `xcaddy build --with github.com/caddy-dns/cloudflare`.
-- `CF_DNS_API_TOKEN` in env with `Zone.DNS:Edit` + `Zone:Read` scope
-  (see [`cloudflare/SKILL.md`](../cloudflare/SKILL.md)).
+### Compose wiring
 
-Other DNS providers: any of the 80+ in
-[caddyserver.com/docs/modules](https://caddyserver.com/docs/modules/) —
-replace `cloudflare` with the provider name and set the right env var.
+```yaml
+# docker-compose.yml
+services:
+  caddy:
+    build: . # or image: your-registry/caddy-cf:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 — skip if you don't want QUIC
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # issued certs live here
+      - caddy_config:/config # autosave of last-applied JSON
+
+volumes:
+  caddy_data:
+  caddy_config:
+```
+
+**Cert persistence is a foot-gun.** Caddy keeps every issued cert + the
+ACME account key under `/data`. Without a named volume, a
+`docker compose down && up` reissues every cert on restart and you'll
+hit LE rate limits (5 duplicate certs per week per set of hostnames)
+inside a day of casual testing. Mount `/data`. Always.
+
+### Other DNS providers
+
+Any of the 80+ at [caddyserver.com/docs/modules](https://caddyserver.com/docs/modules/)
+— replace the provider slug in the `xcaddy build` line, the `acme_dns`
+directive, and the env var. DigitalOcean, for example:
+
+```dockerfile
+RUN xcaddy build --with github.com/caddy-dns/digitalocean
+```
+
+```caddy
+{
+    acme_dns digitalocean {env.DO_AUTH_TOKEN}
+}
+```
+
+### Verify
+
+```bash
+curl -vI https://ipfs.example.com 2>&1 | grep -E 'subject:|issuer:'
+# subject: CN=ipfs.example.com
+# issuer:  C=US, O=Let's Encrypt, CN=R3
+```
+
+If issuance hangs, `docker logs <caddy> -f | grep -i acme` — the
+challenge + DNS propagation steps log individually.
 
 ## On-demand TLS — the DoS foot-gun
 
@@ -225,19 +303,25 @@ When it doesn't:
 
 SPIRENS uses Traefik. If you prefer Caddy, the migration:
 
-1. Replace the Traefik service in `compose/single-host/` with Caddy.
-   Use a Caddy image that has `caddy-dns/cloudflare` compiled in.
+1. Replace the Traefik service in `compose/single-host/` with a Caddy
+   service built from the [xcaddy Dockerfile above](#custom-image-with-xcaddy)
+   (include `caddy-dns/cloudflare` or `caddy-dns/digitalocean`).
 2. Translate the per-service Traefik labels into Caddyfile
-   site-address blocks.
-3. Set `CF_DNS_API_TOKEN` in the Caddy container env.
-4. For wildcards (`*.ipfs.example.com`, `*.eth.example.com`), use a
-   global `acme_dns cloudflare` block.
+   site-address blocks — see [the wildcard Caddyfile](#caddyfile) for
+   the `*.ipfs.example.com`, `*.eth.example.com` shape SPIRENS needs.
+3. Set `CF_DNS_API_TOKEN` (or `DO_AUTH_TOKEN`) in the Caddy container
+   env and keep `caddy_data` as a named volume — the [compose
+   snippet](#compose-wiring) has the required mounts.
+4. For staging / E2E runs, set the `acme_ca` global option to the LE
+   staging directory URL. SPIRENS already uses `ACME_CA_SERVER` this
+   way (see [`.env.example`](https://github.com/MysticRyuujin/spirens/blob/main/.env.example)
+   and [`docs/03-certificates.md`](../docs/03-certificates.md)).
 
 Docs to reference while porting:
 
 - [`docs/02-dns-and-cloudflare.md`](../docs/02-dns-and-cloudflare.md)
 - [`docs/03-certificates.md`](../docs/03-certificates.md)
-- [`docs/04-traefik.md`](../docs/04-traefik.md) — Traefik routers
+- [`docs/05-traefik.md`](../docs/05-traefik.md) — Traefik routers
   become Caddyfile blocks.
 
 ## Upstream references

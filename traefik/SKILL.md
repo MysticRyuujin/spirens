@@ -157,7 +157,7 @@ http:
 
 SPIRENS uses **both**: file provider for global middlewares
 (`config/traefik/dynamic.yml`) and Docker labels for per-service
-routers. See [`docs/04-traefik.md`](../docs/04-traefik.md).
+routers. See [`docs/05-traefik.md`](../docs/05-traefik.md).
 
 ## Middlewares you'll actually use
 
@@ -234,15 +234,16 @@ about, which service it targets, and current status.
 
 Key files:
 
-- `config/traefik/traefik.yml` — static config; `le` resolver; access
-  log; dashboard.
-- `config/traefik/dynamic.yml` — shared middlewares (auth, IP
-  allowlist, security headers, compression).
 - `compose/single-host/compose.traefik.yml` — container, volumes,
-  Cloudflare token.
+  Cloudflare token, **and** static config (entrypoints, `le` resolver,
+  access log, dashboard) — all declared via CLI flags, not a mounted
+  `traefik.yml`.
+- `config/traefik/dynamic.yml` — shared middlewares (auth, IP
+  allowlist, security headers, compression). The only file mounted
+  into the container at `/etc/traefik/`.
 - Each service's compose file — Docker labels for per-service routers.
 
-Walkthrough: [`docs/04-traefik.md`](../docs/04-traefik.md).
+Walkthrough: [`docs/05-traefik.md`](../docs/05-traefik.md).
 
 ## Alternatives
 

@@ -56,6 +56,9 @@ decentralized-web deployment actually serve traffic.
 
 - [`erpc`](./erpc/SKILL.md) — finality-aware caching, hedging, failover,
   per-chain config tiers.
+- [`helios`](./helios/SKILL.md) — a16z's trustless light client.
+  `eth_getProof` requirement, checkpoint trust, placement between
+  dweb-proxy and eRPC.
 
 ## Topology
 

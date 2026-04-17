@@ -152,8 +152,8 @@ whether records are CF-proxied. See:
   with cert-issuance log snippets.
 - [`docs/02-dns-and-cloudflare.md`](../docs/02-dns-and-cloudflare.md) —
   required CF API token scopes (`Zone.DNS:Edit`, `Zone:Read`).
-- `config/traefik/traefik.yml` — the `le` resolver declaration with
-  `dnsChallenge.provider=cloudflare`.
+- `compose/single-host/compose.traefik.yml` — the `le` resolver
+  declaration with `dnschallenge.provider=cloudflare`, as CLI flags.
 
 The exact token scopes matter: Traefik only needs `Zone.DNS:Edit` and
 `Zone:Read`. Anything broader is over-privileged.

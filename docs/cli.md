@@ -170,3 +170,26 @@ spirens encode-hostname-map --export # prints: export LIMO_...=...
 
 Reads `config/dweb-proxy/hostname-map.json`, substitutes `${DWEB_ETH_HOST}`
 from `.env`, strips `_comment` keys, and base64-encodes the result.
+
+---
+
+## cleanup-acme-txt
+
+Delete orphan `_acme-challenge.*` TXT records at your DNS provider.
+
+```bash
+spirens cleanup-acme-txt             # lists, then prompts before deleting
+spirens cleanup-acme-txt --dry-run   # preview only
+spirens cleanup-acme-txt --yes       # non-interactive
+```
+
+| Flag          | Description                        |
+| ------------- | ---------------------------------- |
+| `--dry-run`   | Print what would be deleted; no-op |
+| `--yes`, `-y` | Skip the confirmation prompt       |
+
+ACME DNS-01 challenges create short-lived TXT records that lego is
+supposed to delete once the challenge succeeds. Occasionally (observed
+against fresh Cloudflare zones) it fails to clean up, leaving orphan
+records that pollute the zone and can confuse future troubleshooting.
+This command sweeps them.

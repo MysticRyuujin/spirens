@@ -45,11 +45,14 @@ fully-working alternative.
 
 Everything you need lives in:
 
-- [`config/traefik/traefik.yml`](https://github.com/MysticRyuujin/spirens/blob/main/config/traefik/traefik.yml) — declares the
-  `le` resolver with `dnsChallenge.provider=cloudflare`.
 - [`compose/single-host/compose.traefik.yml`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/compose.traefik.yml)
-  (or `stack.traefik.yml` for swarm) — passes `CF_DNS_API_TOKEN_FILE` and
-  `CF_API_EMAIL` in, mounts the `letsencrypt` volume.
+  (or `stack.traefik.yml` for swarm) — declares the `le` resolver with
+  `dnsChallenge.provider=cloudflare` via CLI flags, passes
+  `CF_DNS_API_TOKEN_FILE` and `CF_API_EMAIL` in, and mounts the
+  `letsencrypt` volume. Traefik's static config lives entirely on the
+  command line — there is no `traefik.yml` mounted.
+- [`config/traefik/dynamic.yml`](https://github.com/MysticRyuujin/spirens/blob/main/config/traefik/dynamic.yml)
+  — the shared middlewares file (auth, IP allowlist, security headers).
 - Each service (eRPC, IPFS, dweb-proxy) sets
   `traefik.http.routers.<name>.tls.certresolver=le` in its labels.
 
@@ -70,7 +73,7 @@ covers the root + one level of subdomain.
 ### Verifying
 
 First boot, `docker logs spirens-traefik -f | grep -i acme` should show issuance
-proceeding. If it gets stuck, jump to [09 — Troubleshooting](09-troubleshooting.md).
+proceeding. If it gets stuck, jump to [10 — Troubleshooting](10-troubleshooting.md).
 
 Once issued:
 
@@ -155,8 +158,12 @@ Use this if:
 - LE DNS-01 via Cloudflare is the common production pattern and works for 99%
   of use cases.
 
-If neither path suits (e.g. you want a paid DigiCert / Sectigo cert), Traefik
-can also load bring-your-own certs the same way Path B does — drop them in
-`secrets/` and reference them from `dynamic-certs.yml`.
+If neither path suits (e.g. you already have a certificate from a commercial
+CA like DigiCert or Sectigo and want to avoid ACME entirely), Traefik can
+load bring-your-own certs the same way Path B does. Drop the PEMs under
+`secrets/` and add a `tls.certificates` block to
+[`config/traefik/dynamic.yml`](https://github.com/MysticRyuujin/spirens/blob/main/config/traefik/dynamic.yml)
+pointing at the mounted paths. Don't set `certresolver=le` on the matching
+routers — Traefik will serve whichever cert in the TLS store covers the SAN.
 
-Continue → [04 — Traefik](04-traefik.md)
+Continue → [04 — Deployment Profiles](04-deployment-profiles.md)

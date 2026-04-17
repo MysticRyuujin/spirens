@@ -15,10 +15,11 @@ flowchart TB
             erpc[eRPC<br/>:8545]
             kubo[IPFS Kubo<br/>gateway :8080 · API :5001]
             dweb[dweb-proxy<br/>:8080 HTTP · :11000 DoH]
+            redis[(Redis<br/>cache + rate limits)]
         end
 
         subgraph optional ["Optional modules (opt-in)"]
-            redis[(Redis<br/>cache)]
+            helios[helios<br/>trustless light client<br/>:8545]
             ddns[cloudflare-ddns]
             dnssync[dns-sync]
             ethnode[ethereum EL+CL<br/>Geth + Lighthouse]
@@ -44,13 +45,15 @@ flowchart TB
     erpc -.->|fallback| quicknode
     erpc -.->|fallback| ankr
     erpc -.->|fallback| infura
-    erpc -.->|optional| redis
+    erpc -.->|optional cache| redis
 
     dweb -->|resolves ENS via| erpc
+    dweb -.->|or via Helios<br/>if enabled| helios
+    helios -.->|needs eth_getProof| erpc
     dweb -->|Kubo API| kubo
-    dweb -.->|optional| redis
+    dweb -->|required| redis
 
     ethnode -.->|localhost| localnode
 
     classDef optdim stroke-dasharray: 5 5,opacity:0.8
-    class redis,ddns,dnssync,ethnode,alchemy,quicknode,ankr,infura optdim
+    class helios,ddns,dnssync,ethnode,alchemy,quicknode,ankr,infura optdim

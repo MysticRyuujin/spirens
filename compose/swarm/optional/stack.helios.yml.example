@@ -1,0 +1,56 @@
+# =============================================================================
+#  Helios — trustless Ethereum light client (Swarm variant)
+# =============================================================================
+#  Activate:
+#    cp stack.helios.yml.example stack.helios.yml
+#    $EDITOR ../../../.env       # set HELIOS_EXECUTION_RPC, HELIOS_CHECKPOINT,
+#                                 # DWEB_ETH_RPC=http://helios:8545
+#    docker stack deploy -c stack.helios.yml spirens-helios
+#
+#  Helios state is small (MB, not GB) but it's still stateful. Pin the
+#  service to one node so its warm state isn't thrown away when the
+#  container moves — see deploy.placement.constraints below.
+#
+#  See docs/helios.md for the architecture narrative.
+# =============================================================================
+---
+services:
+  helios:
+    image: ghcr.io/a16z/helios:0.9.0
+    volumes:
+      - helios_data:/data
+    environment:
+      RUST_LOG: "info"
+    command:
+      - ethereum
+      - --network=mainnet
+      - --execution-rpc=${HELIOS_EXECUTION_RPC:?set HELIOS_EXECUTION_RPC in .env}
+      - --checkpoint=${HELIOS_CHECKPOINT:?set HELIOS_CHECKPOINT in .env}
+      - --rpc-bind-ip=0.0.0.0
+      - --rpc-port=8545
+      - --data-dir=/data
+    networks:
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          # Pin to a stable node so the warm checkpoint state survives
+          # container moves. Replace with your actual node hostname.
+          - node.role == manager
+      restart_policy:
+        condition: any
+        delay: 10s
+      update_config:
+        order: start-first
+        parallelism: 1
+
+volumes:
+  helios_data:
+    name: spirens_helios_data
+
+networks:
+  backend:
+    name: spirens_backend
+    external: true

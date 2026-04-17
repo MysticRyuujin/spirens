@@ -34,7 +34,7 @@ compose/{single-host,swarm}/     compose & stack files, per topology
   optional/                      opt-in modules (add to include: yourself)
 config/                          shared by both topologies
 tests/                           pytest suite
-docs/                            numbered 00-09, read in order
+docs/                            numbered 00-10, read in order
 ```
 
 ## Git
@@ -107,7 +107,7 @@ two never drift.
 `.claude-plugin/` plus the per-skill directories (`ship/`, `dns/`,
 `cloudflare/`, `tls-acme/`, `lets-encrypt/`, `ipfs/`, `gateways/`,
 `ipns/`, `ens-resolution/`, `traefik/`, `nginx/`, `caddy/`, `erpc/`,
-`topology/`) at the repo root ship the `spirens-skills` Claude Code
+`helios/`, `topology/`) at the repo root ship the `spirens-skills` Claude Code
 plugin. Each skill is `<name>/SKILL.md` with YAML frontmatter whose
 `description` is a **trigger** ("use when the user asks X"), not a
 summary.
@@ -135,7 +135,7 @@ mkdocs serve                   # local preview at http://localhost:8000
 mkdocs build                   # build to site/
 ```
 
-The `docs/` directory is the source. Files are numbered 00-09 and consumed
+The `docs/` directory is the source. Files are numbered 00-10 and consumed
 directly by mkdocs — no restructuring needed. The `docs/index.md` is the
 landing page, and `docs/cli.md` is the CLI reference.
 

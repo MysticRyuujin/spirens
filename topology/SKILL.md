@@ -134,7 +134,7 @@ Backend services run as replicated services on the overlay network
 without port publishing. Traefik forwards overlay-internally to
 backends.
 
-Details: [`docs/10-deployment-profiles.md`](../docs/10-deployment-profiles.md).
+Details: [`docs/04-deployment-profiles.md`](../docs/04-deployment-profiles.md).
 
 ## Volume strategies for stateful services in Swarm
 
@@ -215,7 +215,7 @@ Module parity: every service is in both. The Compose `include:` file
 bundles them into one project; Swarm deploys each as a separate stack
 on a shared overlay network.
 
-Full details: [`docs/10-deployment-profiles.md`](../docs/10-deployment-profiles.md).
+Full details: [`docs/04-deployment-profiles.md`](../docs/04-deployment-profiles.md).
 
 ## Upstream references
 

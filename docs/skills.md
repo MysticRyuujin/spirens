@@ -69,6 +69,9 @@ tutorials — they exist to patch specific LLM blind spots.
 
 - [`erpc`](https://github.com/MysticRyuujin/spirens/blob/main/erpc/SKILL.md)
   — finality-aware caching, hedging, failover, per-chain config tiers.
+- [`helios`](https://github.com/MysticRyuujin/spirens/blob/main/helios/SKILL.md)
+  — a16z's trustless light client; `eth_getProof` requirement,
+  checkpoint trust, placement between dweb-proxy and eRPC.
 
 ### Topology
 

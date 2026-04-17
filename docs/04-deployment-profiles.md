@@ -1,4 +1,4 @@
-# 10 · Deployment profiles
+# 04 · Deployment profiles
 
 SPIRENS works in three deployment models. Pick the one that matches your
 network, then follow the profile-specific guidance below.
@@ -267,7 +267,7 @@ tunnel without exposing your host's IP or opening any inbound ports.
    - **Let's Encrypt via DNS-01** (recommended) — works exactly as in the
      other profiles since it only needs API access, not inbound ports.
    - **Cloudflare Origin Certificates** — see
-     [03 — Certificates, Path B](03-certificates.md#path-b-cloudflare-origin-certificates).
+     [03 — Certificates, Path B](03-certificates.md#path-b--cloudflare-origin-certificates).
 
 !!! warning "Wildcard limitation on free Cloudflare plans"
 
@@ -310,8 +310,9 @@ Internal profile, but accessible from anywhere your tailnet reaches.
 - Install Tailscale on the SPIRENS host and your client devices
 - Use local DNS or Tailscale's MagicDNS to resolve service hostnames to the
   SPIRENS host's Tailscale IP (100.x.y.z)
-- Add `100.64.0.0/10` to Traefik's trusted IPs in
-  `config/traefik/traefik.yml` under `forwardedHeaders.trustedIPs`
+- Add `100.64.0.0/10` to the
+  `--entrypoints.websecure.forwardedheaders.trustedips` CLI flag in
+  `compose/single-host/compose.traefik.yml`
 
 **Tailscale Funnel (selective public exposure):**
 
@@ -320,7 +321,8 @@ ports on your tailnet node to the public internet via Tailscale's edge.
 
 - Funnel handles TLS termination at Tailscale's edge and forwards to your
   local Traefik on port 443
-- Add `100.64.0.0/10` to Traefik's `forwardedHeaders.trustedIPs`
+- Add `100.64.0.0/10` to Traefik's `forwardedheaders.trustedips` CLI flag
+  (see previous section)
 - Wildcard support depends on your Tailscale DNS configuration — you may
   need to use Tailscale-assigned hostnames rather than your own domain
 - See the [Tailscale Funnel docs](https://tailscale.com/kb/1223/funnel) for
@@ -334,4 +336,4 @@ Changing profiles is a configuration change, not a migration. Update
 `DEPLOYMENT_PROFILE` in `.env`, adjust your DNS records (move A records from
 Cloudflare to local DNS or vice versa), and re-run `spirens doctor` to verify.
 
-Continue → [04 — Traefik](04-traefik.md)
+Continue → [05 — Traefik](05-traefik.md)

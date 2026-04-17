@@ -1,9 +1,20 @@
 # SPIRENS
 
+> **Vibe-coded.** This project was built with AI assistance. Contributions are
+> welcome — but don't expect much support or hand-holding.
+
 Sovereign Portal for IPFS Resolution via Ethereum Naming Services
 
-A turnkey, modular, educational reference for self-hosting a private Web3 infrastructure
-stack. Clone it, point a domain at Cloudflare, fill in a `.env`, and bring up:
+A turnkey, modular, educational reference for self-hosting a private Web3
+infrastructure stack. Clone it, add a domain as a Cloudflare zone (for ACME
+TLS only — your A records can stay wherever they currently live), fill in a
+`.env`, and bring up:
+
+**Who this is for:** operators who are comfortable with Docker Compose, a
+bash shell, and editing YAML. You do not need to be a Kubernetes SRE or an
+Ethereum protocol dev. If you can run `docker compose up -d`, read logs, and
+edit a config file, you can run SPIRENS. Home lab, small VPS, or dedicated
+server — all three are first-class targets.
 
 | Endpoint                           | What it is                                                                                                              |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -41,9 +52,10 @@ TLS end-to-end via Let's Encrypt (Cloudflare DNS-01). Wildcard certs included.
         ┌──────┐ ┌──────┐ ┌───────────┐
         │ eRPC │ │ Kubo │ │ dweb-proxy │───┐
         └──┬───┘ │(IPFS)│ │(ENS→IPFS)  │   │  resolves contenthash
-           │     └──┬───┘ └─────┬──────┘   │  via eRPC, returns
-           │        │           │          │  X-Content-Location:
-           │        └───────────┘          │  {cid}.ipfs.example.com
+           │     └──┬───┘ └─────┬──────┘   │  via eRPC (or via the
+           │        │           │          │  opt-in Helios light
+           │        └───────────┘          │  client, for trustless
+           │                               │  verification)
            │                               │
   ┌────────▼──────── upstream ─────────┐   │
   │ ETH_LOCAL_URL   (your own node)   ◄┼───┘
@@ -84,7 +96,7 @@ version.
    spirens health
    ```
 
-6. **Read the docs in order** (`docs/00-overview.md` → `docs/09-troubleshooting.md`)
+6. **Read the docs in order** (`docs/00-overview.md` → `docs/10-troubleshooting.md`)
    whenever you want to understand _why_ a config is shaped a certain way.
 
 ---
@@ -100,10 +112,10 @@ your own infra. Install from inside a Claude Code session:
 /plugin install spirens-skills
 ```
 
-The plugin ships 13 skills covering IPFS, IPNS, gateways, ENS resolution,
-TLS/ACME, DNS/Cloudflare, Traefik, nginx, Caddy, eRPC, and single-host vs
-Swarm topology. See [`SKILL.md`](SKILL.md) for the full table of contents,
-or the `docs/skills.md` page on the built site.
+The plugin ships 15 skills covering IPFS, IPNS, gateways, ENS resolution,
+TLS/ACME, DNS/Cloudflare, Traefik, nginx, Caddy, eRPC, Helios, and
+single-host vs Swarm topology. See [`SKILL.md`](SKILL.md) for the full
+table of contents, or the `docs/skills.md` page on the built site.
 
 Modeled on [`ethskills`](https://github.com/austintgriffith/ethskills) —
 ethskills covers Ethereum itself; these cover the infra that makes a
@@ -140,6 +152,7 @@ Every command supports `--help` and `--dry-run` where applicable.
 | dweb-proxy    |      ✓      |    ✓    |   ON    | ENS → IPFS resolution                             |
 | DDNS          |      ✓      |    ✓    |   off   | Cloudflare dynamic DNS update                     |
 | DNS sync      |      ✓      |    ✓    |   off   | Reconcile `config/dns/records.yaml` to Cloudflare |
+| Helios        |   example   | example |   off   | Trustless light client for ENS resolution         |
 | Ethereum node |   example   | example |   off   | Reference Geth + Lighthouse pair                  |
 
 Optional modules live under `compose/*/optional/`. Opt in by adding them to

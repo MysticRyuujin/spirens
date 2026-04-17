@@ -1,4 +1,4 @@
-# 08 · dweb-proxy
+# 09 · dweb-proxy
 
 [`dweb-proxy-api`](https://github.com/ethlimo/dweb-proxy-api) is a small Go
 service that bridges ENS names to IPFS. It does two things for SPIRENS:
@@ -41,6 +41,7 @@ dweb-proxy  :8080
   │   1. reads Host: vitalik.eth.example.com
   │   2. checks LIMO_HOSTNAME_SUBSTITUTION_CONFIG → strip "eth.example.com" → "vitalik.eth"
   │   3. calls eRPC to read contenthash of vitalik.eth
+  │      (or Helios → eRPC if the trustless light-client module is enabled)
   │   4. extracts CID:  bafybei...
   │   5. returns 30x with:
   │        Location:             https://bafybei….ipfs.example.com/
@@ -147,4 +148,25 @@ SPIRENS handles this for you:
 To rotate the password: blank `REDIS_PASSWORD=` in `.env`, re-run
 `spirens bootstrap`, then `spirens up single -s redis -s dweb-proxy`.
 
-Continue → [09 — Troubleshooting](09-troubleshooting.md)
+## Trustless resolution via Helios (opt-in)
+
+dweb-proxy reads ENS state from a plain Ethereum RPC, which by default is
+the internal eRPC endpoint. eRPC does the right thing for rpc.* traffic
+(caching, failover, rate limiting) but it doesn't _verify_ that the data
+a vendor returned actually matches the state the Ethereum contract
+holds — it trusts the upstream.
+
+If you want the ENS → IPFS resolution path to be cryptographically
+verified, insert [Helios](helios.md) between dweb-proxy and eRPC:
+
+```text
+dweb-proxy → helios → eRPC → upstreams
+              │ verifies every response via Merkle proof against the beacon chain
+```
+
+The flip is a single env var (`DWEB_ETH_RPC=http://helios:8545`) plus
+activating the optional Helios compose module. See
+[docs/helios.md](helios.md) for the full walkthrough, failure modes,
+and why this is off by default.
+
+Continue → [10 — Troubleshooting](10-troubleshooting.md)

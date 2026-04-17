@@ -188,7 +188,7 @@ contenthash (or its dnslink fallback) resolves to a CID, which the
 gateway serves. IPNS is only involved if the ENS record itself points at
 an IPNS path — rare.
 
-See [`docs/08-dweb-proxy.md`](../docs/08-dweb-proxy.md) for the
+See [`docs/09-dweb-proxy.md`](../docs/09-dweb-proxy.md) for the
 resolution chain (ENS → dnslink → IPFS) and
 [`ens-resolution/SKILL.md`](../ens-resolution/SKILL.md) for the ENS
 specifics.

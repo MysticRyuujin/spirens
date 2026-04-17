@@ -1,8 +1,21 @@
-# 05 · Ethereum Node
+# 06 · Ethereum Node
 
-> Read this before [06 — eRPC](06-erpc.md). SPIRENS's whole eRPC narrative
+> Read this before [07 — eRPC](07-erpc.md). SPIRENS's whole eRPC narrative
 > assumes you either run your own node or are making a conscious choice not
 > to.
+
+!!! tip "Don't want to run a full node? Consider Helios."
+
+    A full Ethereum node costs 4 TB of disk, 16+ GB of RAM, and days of
+    sync time. If you want the sovereignty property ("I don't have to
+    trust what the RPC is telling me") without that footprint, see
+    [Helios](helios.md) — a trustless light client from a16z that verifies
+    every state read cryptographically using a few MB of state.
+
+    Helios is not a full-node replacement (no archive, no traces, no
+    validator), but for SPIRENS's ENS resolution use case it's ideal.
+    It still needs an upstream RPC — that's the whole point — but the
+    upstream can be a paid vendor or eRPC without leaking trust.
 
 Running a JSON-RPC proxy like eRPC in front of Alchemy/QuickNode/Ankr is
 fine. Running one in front of _your own Ethereum node_ is better on every
@@ -165,4 +178,4 @@ not necessarily where you start.
   validator, start with [mevboost.pics](https://mevboost.pics/) for relay
   choice context. This is out of scope here.
 
-Continue → [06 — eRPC](06-erpc.md)
+Continue → [07 — eRPC](07-erpc.md)

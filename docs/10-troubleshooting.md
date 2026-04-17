@@ -1,4 +1,4 @@
-# 09 · Troubleshooting
+# 10 · Troubleshooting
 
 A catalog of everything that goes wrong on first boot and steady-state,
 organized by symptom. Each entry: **what you see** → **why** → **how to fix**.
@@ -54,17 +54,16 @@ If that fails, regenerate the token per
 **Why.** Most likely: DNS-01 challenge TXT record didn't propagate before
 the delay elapsed.
 
-**Fix.** Bump `delayBeforeCheck` in `config/traefik/traefik.yml`:
+**Fix.** Bump `delaybeforecheck` on Traefik's command line. In
+`compose/single-host/compose.traefik.yml` (or `stack.traefik.yml` for swarm),
+change:
 
 ```yaml
-certificatesResolvers:
-  le:
-    acme:
-      dnsChallenge:
-        delayBeforeCheck: 60s # was 10s
+- --certificatesresolvers.le.acme.dnschallenge.delaybeforecheck=5s
 ```
 
-Restart Traefik. Long delays are fine — issuance only happens rarely.
+to a longer delay (e.g. `60s`) and restart Traefik. Long delays are fine —
+issuance only happens rarely.
 
 ### Wildcard cert issuance failing
 
@@ -79,6 +78,19 @@ Restart Traefik. Long delays are fine — issuance only happens rarely.
 reliable, switch back and delete `letsencrypt/acme.json` to start fresh.
 See [`03-certificates.md`](03-certificates.md#verifying).
 
+!!! tip "Orphan `_acme-challenge` TXT records?"
+
+    If LE challenges succeed but TXT records linger in your zone (observed
+    on fresh CF zones where lego's cleanup step fails), sweep them with:
+
+    ```bash
+    spirens cleanup-acme-txt --dry-run   # preview
+    spirens cleanup-acme-txt             # delete after confirmation
+    ```
+
+    Orphans don't block new issuance but they clutter the zone and mask
+    real propagation issues during debugging.
+
 ---
 
 ## `526 Invalid SSL Certificate` from Cloudflare
@@ -91,8 +103,8 @@ hostname.
 
 - Flip the record to DNS-only (grey cloud). The cert at the origin is
   the one the browser sees.
-- **Or** switch to Cloudflare Origin Certificates
-  ([`03-certificates.md#path-b`](03-certificates.md#path-b-cloudflare-origin-certificates))
+- **Or** switch to [Cloudflare Origin
+  Certificates](03-certificates.md#path-b--cloudflare-origin-certificates)
   and set CF to **Full (strict)**.
 
 ---
@@ -288,7 +300,7 @@ isn't routable from your LAN (hairpin NAT issue), or isn't in DNS at all.
 
 **Fix.** Configure local DNS overrides for every SPIRENS hostname (including
 wildcards). See
-[10 — Deployment Profiles: Internal](10-deployment-profiles.md#setting-up-local-dns)
+[04 — Deployment Profiles: Internal](04-deployment-profiles.md#setting-up-local-dns)
 for per-tool instructions (Pi-hole, OPNsense, dnsmasq).
 
 ---
@@ -306,7 +318,7 @@ subdomain must be added individually in the tunnel config.
 - Add individual tunnel hostnames for the ENS/IPFS names you use most
 - Upgrade to a paid Cloudflare plan that supports wildcard tunnels
 - Use Tailscale Funnel as an alternative (see
-  [10 — Deployment Profiles: Tunnel](10-deployment-profiles.md#profile-tunnel))
+  [04 — Deployment Profiles: Tunnel](04-deployment-profiles.md#profile-tunnel))
 
 ---
 
@@ -314,14 +326,14 @@ subdomain must be added individually in the tunnel config.
 
 If you can't forward ports (CGNAT, office network), see the **tunnel
 profile** in
-[10 — Deployment Profiles](10-deployment-profiles.md#cloudflare-tunnel)
+[04 — Deployment Profiles](04-deployment-profiles.md#cloudflare-tunnel)
 for a full walkthrough. The short version:
 
 1. Install `cloudflared` and create a tunnel pointing at Traefik's local
    address.
 2. LE DNS-01 still works for certificates (it doesn't need inbound ports).
-   Alternatively, switch to Cloudflare Origin Certificates
-   ([`03-certificates.md#path-b`](03-certificates.md#path-b-cloudflare-origin-certificates)).
+   Alternatively, switch to [Cloudflare Origin
+   Certificates](03-certificates.md#path-b--cloudflare-origin-certificates).
 3. On the free CF plan, wildcard hosts through a Tunnel need one manual
    hostname per subdomain (no native wildcard support).
 

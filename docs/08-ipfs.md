@@ -1,4 +1,4 @@
-# 07 · IPFS (Kubo)
+# 08 · IPFS (Kubo)
 
 SPIRENS runs [Kubo](https://github.com/ipfs/kubo), the reference Go
 implementation of IPFS, to host your own content-addressed storage and
@@ -140,8 +140,36 @@ small VPS:
 - Consider `Reprovider.Interval: "24h"` (default is 12h) to reduce DHT
   chatter.
 
+!!! warning "Bandwidth costs can surprise you"
+
+    A public IPFS gateway serves whatever content anyone asks for (CIDs
+    you host _or_ fetch on demand). A single popular site pinned on your
+    node can push hundreds of GB/month through your gateway. On cheap VPS
+    plans with metered egress (Hetzner, DigitalOcean, Vultr), this is how
+    a $5/month server becomes a $50/month server.
+
+    Mitigations, cheapest to most restrictive:
+
+    1. **Track usage early.** `docker exec spirens-ipfs ipfs stats bw` and
+       your provider's bandwidth graphs. Set an alert at 50% of your plan's
+       monthly quota.
+    2. **Cloudflare proxy the gateway** (`ipfs` A record orange-cloud). CF
+       caches by URL, so repeat fetches of the same CID are free after the
+       first hit. Note the 100 MB per-response cap on the Free plan.
+    3. **Rate-limit at Traefik.** Add a `rateLimit` middleware to
+       [`config/traefik/dynamic.yml`](https://github.com/MysticRyuujin/spirens/blob/main/config/traefik/dynamic.yml)
+       and attach it to the IPFS gateway router — see
+       [04 — Deployment Profiles: Rate limiting](04-deployment-profiles.md#rate-limiting).
+    4. **IP-allowlist the gateway.** If you're the only consumer, add
+       `dashboard-ipallow@file` to the gateway's `middlewares=` label. You
+       keep the gateway; random scrapers can't reach it.
+    5. **Serve only what you pin.** Turn off DHT providing for non-pinned
+       content with `Routing.Type: autoclient` (Kubo 0.21+). Your node
+       becomes a consumer-only node for other CIDs; it only serves what
+       you explicitly chose to host.
+
 If you want a managed gateway and don't care about sovereignty, Cloudflare
 runs one at `cloudflare-ipfs.com`. SPIRENS's reason for existing is that
 you don't want someone else running it.
 
-Continue → [08 — dweb-proxy](08-dweb-proxy.md)
+Continue → [09 — dweb-proxy](09-dweb-proxy.md)
