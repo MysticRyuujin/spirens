@@ -85,7 +85,7 @@ subcommand to `remote.py` instead.
 # Full internal-profile pass (default)
 ./tests/e2e/run.py --all
 
-# Same, but explicit — public-only phases (10-13) skip with a reason
+# Same, but explicit — public-only phases (06, 09, 14, 15) skip with a reason
 ./tests/e2e/run.py --all --profile internal
 
 # Public-profile pass against a VM with a routable IP + CF zone
@@ -142,12 +142,12 @@ skipped with a one-line reason when `--profile` (or
 | `03_bootstrap`            | any         | render `.env` fixture, `spirens bootstrap` is idempotent                                |
 | `04_dry_runs`             | any         | every `--dry-run` is side-effect-free                                                   |
 | `05_up_single`            | any         | `spirens up single` brings all expected containers up                                   |
-| `07_health_doctor`        | any         | `doctor` + `health --json` (profile-aware) converge                                     |
+| `06_public_dns_preflight` | public only | install every A record from `config/dns/records.yaml` → public IP; wait for propagation |
+| `07_health_doctor`        | any         | `doctor` + `health --json` (profile-aware) converge — needs DNS live on public          |
 | `08_endpoints`            | any         | traefik 401, eRPC `eth_chainId=0x1`, IPFS CID 200 via `--resolve`                       |
-| `10_public_dns_preflight` | public only | install every A record from `config/dns/records.yaml` → public IP; wait for propagation |
-| `11_public_endpoints`     | public only | same endpoint checks as 08, but via real public DNS                                     |
-| `12_ddns_module`          | public only | `favonia/cloudflare-ddns` container publishes tracked A records                         |
-| `13_dns_sync_module`      | public only | `dns-sync` one-shot reconciles `records.yaml` → Cloudflare                              |
+| `09_public_endpoints`     | public only | same endpoint checks as 08, but via real public DNS                                     |
+| `14_ddns_module`          | public only | `favonia/cloudflare-ddns` container publishes tracked A records                         |
+| `15_dns_sync_module`      | public only | `dns-sync` one-shot reconciles `records.yaml` → Cloudflare                              |
 | `17_swarm_bootstrap`      | any         | swarm init (+ live-restore toggle + ipfs node label), `spirens bootstrap --swarm`       |
 | `18_up_swarm`             | any         | `spirens up swarm`, wait for every service to converge                                  |
 | `19_swarm_health`         | any         | doctor + health + endpoint checks against the swarm stack                               |

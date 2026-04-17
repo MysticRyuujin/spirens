@@ -13,7 +13,7 @@ any existing A record for it. Start DDNS. Poll Cloudflare until an A
 record materialises. Assert the record's content is a routable IPv4.
 
 Runs only on the public profile. Tear-down is explicit so the DDNS
-container doesn't linger into phase 13's dns-sync test.
+container doesn't linger into phase 15's dns-sync test.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ def _wait_for_a_record(ctx: Context, fqdn: str) -> dict[str, object]:
     )
 
 
-@phase("12_ddns_module", profiles=("public",))
+@phase("14_ddns_module", profiles=("public",))
 def ddns_module(ctx: Context) -> None:
     fqdn = f"{TRACK_NAME}.{ctx.env.domain}"
     _delete_existing(ctx, fqdn)
@@ -70,7 +70,7 @@ def ddns_module(ctx: Context) -> None:
     # Start DDNS with DDNS_DOMAINS overridden inline — the compose file
     # reads $DDNS_DOMAINS, which the wrapper `spirens up` normally
     # derives from DDNS_RECORDS. Injecting here keeps us independent of
-    # .env edits (and keeps phase 13 usable right after).
+    # .env edits (and keeps phase 15 usable right after).
     remote_repo = ctx.env.remote_repo
     ssh_run(
         ctx.env,

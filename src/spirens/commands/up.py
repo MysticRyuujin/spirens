@@ -68,9 +68,18 @@ def up(
         die(f".env validation failed: {exc}")
         return
 
-    # 3. Encode hostname-map
+    # 3. Encode hostname-map + render env-gated config files
     log("encoding dweb-proxy hostname-map")
     limo_config = encode_hostname_map(config.dweb_eth_host, repo_root)
+
+    # Render erpc.generated.yaml from erpc.yaml — strips the local-node
+    # upstream when ETH_LOCAL_URL is empty so eRPC doesn't fail parse on
+    # an empty endpoint. Compose mounts the generated file, not the
+    # committed template.
+    if not dry_run:
+        from spirens.core.erpc_config import render as render_erpc
+
+        render_erpc(repo_root, config)
 
     # 4. Build full environment (with derived vars)
     env = build_env(config, env_path)

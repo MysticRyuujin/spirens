@@ -57,12 +57,13 @@ Assuming `BASE_DOMAIN=example.com`. This list lives in
 
 | Type | Name           | Visibility | Proxy | Purpose                                                   |
 | :--- | :------------- | :--------- | :---- | :-------------------------------------------------------- |
-| A    | `rpc`          | Public     | DNS   | eRPC JSON-RPC endpoint                                    |
-| A    | `ipfs`         | Public     | DNS   | IPFS HTTP gateway (root)                                  |
+| A    | `rpc`          | Public     | Proxy | eRPC JSON-RPC endpoint (HTTP-only, no WS)                 |
+| A    | `ipfs`         | Public     | Proxy | IPFS HTTP gateway root (CID caching at the edge)          |
 | A    | `*.ipfs`       | Public     | DNS   | IPFS subdomain gateway — `{cid}.ipfs.example.com`         |
-| A    | `eth`          | Public     | DNS   | ENS gateway root                                          |
+| A    | `*.ipns`       | Public     | DNS   | IPFS subdomain gateway — `{key}.ipns.example.com`         |
+| A    | `eth`          | Public     | Proxy | ENS gateway root                                          |
 | A    | `*.eth`        | Public     | DNS   | ENS subdomain gateway — `vitalik.eth.example.com`         |
-| A    | `ens-resolver` | Internal   | DNS   | DoH endpoint Kubo hits for `.eth` DNSLink resolution      |
+| A    | `ens-resolver` | Internal   | Proxy | DoH endpoint Kubo hits for `.eth` DNSLink resolution      |
 | A    | `traefik`      | Internal   | Proxy | Traefik dashboard (IP-allowlisted + basic-auth at origin) |
 
 !!! info "Visibility doesn't mean optional"
@@ -129,6 +130,40 @@ to the internal IP (avoiding a hairpin through your public IP), configure both:
 LAN clients shortcut straight to the internal IP. Public clients go through
 Cloudflare to your public IP. Keep both in sync if your stack's IP changes.
 
+## Required Cloudflare zone setting: SSL/TLS mode = **Full**
+
+If you proxy any records (the default for most of SPIRENS), set your
+Cloudflare zone's SSL/TLS encryption mode to **Full** (not "Flexible",
+and not "Full (strict)" unless you're using production LE certs).
+
+**Why this matters:**
+
+- **Flexible**: client → (HTTPS) → Cloudflare → (HTTP) → origin. CF
+  hits Traefik on port 80, Traefik 301-redirects to HTTPS, CF forwards
+  the redirect to the client. Every proxied endpoint looks broken.
+- **Full**: client → (HTTPS) → Cloudflare → (HTTPS) → origin. Works.
+  Traefik's LE certs handle origin TLS; CF doesn't validate the chain.
+- **Full (strict)**: same as Full but CF validates the origin cert
+  against a public trust store. Use only with production LE certs.
+  Staging certs chain to "Fake LE Intermediate" which isn't public-
+  trusted, so strict mode fails.
+
+**How to set it:**
+
+Cloudflare dashboard → your zone → SSL/TLS → Overview → Configure →
+choose "Full". Takes effect within seconds at the edge.
+
+New zones created after 2024 default to "Full". Older zones default
+to "Flexible" — check yours before going public.
+
+!!! warning "Token permission"
+
+    Reading or changing SSL/TLS mode programmatically requires the CF
+    token to include **Zone → Zone Settings → Edit** in addition to
+    `Zone.DNS:Edit`. If your token only has `Zone.DNS:Edit`, set SSL
+    mode manually via the dashboard, or regenerate the token — see
+    [Token: required scopes](#token-required-scopes) below.
+
 ## Proxy vs DNS-only
 
 Cloudflare's orange-cloud (proxy) mode hides your origin IP and runs traffic
@@ -136,15 +171,15 @@ through CF's WAF + CDN. It's great where it fits — and a problem where it
 doesn't. **This section only applies to public deployments with A records at
 Cloudflare.**
 
-| Record         | Recommended  | Why                                                                                                                                                        |
-| :------------- | :----------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rpc`          | DNS-only     | Some RPC clients use long-lived WebSocket/streaming connections that CF's free tier terminates or rate-limits. HTTP-only users can safely flip to Proxied. |
-| `ipfs`         | DNS-only     | CF aggressively caches by URL — fine for IPFS (content is immutable) but expect 100MB/request limits on Free plan.                                         |
-| `*.ipfs`       | **DNS-only** | **Wildcard proxying is a paid feature** (Advanced Certificate Manager / ACM). On Free, this MUST stay DNS-only.                                            |
-| `eth`          | DNS-only     | Same-zone as `*.eth` — keep consistent.                                                                                                                    |
-| `*.eth`        | **DNS-only** | Same wildcard-on-Free constraint as `*.ipfs`.                                                                                                              |
-| `ens-resolver` | DNS-only     | Machine-to-machine DoH endpoint; Kubo wants raw TLS without CF interpreting the stream.                                                                    |
-| `traefik`      | Proxied      | Perfect use-case for CF: hide origin IP, free WAF, and the dashboard is already IP-allowlisted + password-locked at origin.                                |
+| Record         | Recommended  | Why                                                                                                                                                 |
+| :------------- | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rpc`          | Proxied      | eRPC is HTTP-only JSON-RPC — no WebSocket support — so CF's idle-timeout isn't a factor. You get DDoS protection and cache hits on idempotent RPCs. |
+| `ipfs`         | Proxied      | CF caches by URL, which is ideal for content-addressed CIDs. Caveat: 100MB request/response cap on the Free plan.                                   |
+| `*.ipfs`       | **DNS-only** | **Wildcard proxying is a paid feature** (Advanced Certificate Manager / ACM). On Free/Pro, this MUST stay DNS-only.                                 |
+| `eth`          | Proxied      | Same shape as `ipfs` — grey stays grey for `*.eth` because of the wildcard constraint.                                                              |
+| `*.eth`        | **DNS-only** | Same wildcard-on-Free/Pro constraint as `*.ipfs`.                                                                                                   |
+| `ens-resolver` | Proxied      | DoH is plain HTTPS POST with small JSON — benefits from CF's edge caching and origin hiding.                                                        |
+| `traefik`      | Proxied      | Perfect use-case for CF: hide origin IP, free WAF, dashboard already IP-allowlisted + password-locked at origin.                                    |
 
 ### What happens if you proxy something that shouldn't be
 
@@ -160,30 +195,55 @@ If you hit any of these, flip the record to DNS-only and try again.
 
 ## Scoped API token
 
+### Token: required scopes
+
 **Do not** use the Global API Key. SPIRENS needs one token with a narrow
 scope:
 
 1. Go to <https://dash.cloudflare.com/profile/api-tokens>.
 2. Click **Create Token** → **Create Custom Token**.
-3. Permissions (both required):
-   - `Zone` → `DNS` → `Edit`
-   - `Zone` → `Zone` → `Read`
+3. Permissions:
+   - `Zone` → `DNS` → `Edit` — required. Used by Traefik (DNS-01
+     challenges), DDNS, and `dns-sync`.
+   - `Zone` → `Zone` → `Read` — required. Resolves the zone ID from the
+     domain name.
+   - `Zone` → `Zone Settings` → `Edit` — **required on public
+     deployments** that proxy records. The SSL/TLS mode setting
+     ([see above](#required-cloudflare-zone-setting-ssltls-mode-full))
+     lives under Zone Settings, and SPIRENS's bootstrap check verifies
+     it's set to "Full". Without this scope you'll need to manage SSL
+     mode manually in the CF dashboard.
 4. Zone Resources:
    - **Include** → **Specific zone** → (your zone)
 5. (Optional) TTL and client IP restrictions — fine to leave unset.
 6. Create, copy the token, paste it into `.env` as `CF_DNS_API_TOKEN`.
 
-This single token is reused by **three** things — each of which only needs
-`Zone.DNS:Edit` + `Zone:Read`:
+### How the token is used
 
-| Consumer                                  | What it does with the token                   |
-| :---------------------------------------- | :-------------------------------------------- |
-| Traefik (LE DNS-01 ACME resolver)         | Creates/deletes `_acme-challenge` TXT records |
-| Optional DDNS (`favonia/cloudflare-ddns`) | Updates A records when your public IP changes |
-| Optional `dns-sync`                       | Reconciles `records.yaml` to the zone         |
+This single token is reused by **four** things — each of which has the
+scope it needs from the set above:
 
-If you're uncomfortable reusing it, create three narrower tokens and wire each
-consumer to its own. Trivial to do via a per-service env var.
+| Consumer                                  | What it does with the token                    | Scopes it hits         |
+| :---------------------------------------- | :--------------------------------------------- | :--------------------- |
+| Traefik (LE DNS-01 ACME resolver)         | Creates/deletes `_acme-challenge` TXT records  | DNS:Edit               |
+| Optional DDNS (`favonia/cloudflare-ddns`) | Updates A records when your public IP changes  | DNS:Edit               |
+| Optional `dns-sync`                       | Reconciles `records.yaml` to the zone          | DNS:Edit, Zone:Read    |
+| `spirens doctor` / `cleanup-acme-txt`     | Zone lookups, TXT cleanup, SSL-mode validation | All three scopes above |
+
+If you're uncomfortable reusing one token, create narrower tokens per
+consumer. Trivial to wire via per-service env vars.
+
+### Upgrading an existing token
+
+If your token was generated with only `DNS:Edit` + `Zone:Read` and you
+want to flip to the public profile, you don't have to regenerate from
+scratch:
+
+1. Dashboard → API tokens → find your token → **Edit**
+2. Under **Permissions**, click **+ Add more** → `Zone` → `Zone
+Settings` → `Edit`
+3. **Continue to summary** → **Update Token**. The token value doesn't
+   change; no edits to `.env` needed.
 
 ## Dynamic IP? Enable DDNS
 

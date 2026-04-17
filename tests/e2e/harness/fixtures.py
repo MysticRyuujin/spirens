@@ -40,6 +40,7 @@ def render(profile: str, env: TestEnv) -> str:
     path = FIXTURES / f"env_{profile}.template"
     if not path.is_file():
         raise SystemExit(f"no fixture for profile {profile!r}: {path}")
+
     values = {
         "BASE_DOMAIN": env.domain,
         "ACME_EMAIL": env.acme_email,

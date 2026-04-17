@@ -65,7 +65,7 @@ def _curl_json(url: str, body: Mapping[str, object], *, timeout: int = 30) -> ob
     return json.loads(r.stdout)
 
 
-@phase("11_public_endpoints", profiles=("public",))
+@phase("09_public_endpoints", profiles=("public",))
 def public_endpoints(ctx: Context) -> None:
     base = ctx.env.domain
 

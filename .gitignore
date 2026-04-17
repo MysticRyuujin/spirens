@@ -15,6 +15,7 @@ secrets/*
 # Generated
 /*.log
 /site/
+/config/erpc/erpc.generated.yaml
 
 # Python
 .venv/

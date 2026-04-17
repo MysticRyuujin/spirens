@@ -50,7 +50,7 @@ def _wait_for_a_record(ctx: Context, fqdn: str) -> dict[str, object]:
     )
 
 
-@phase("13_dns_sync_module", profiles=("public",))
+@phase("15_dns_sync_module", profiles=("public",))
 def dns_sync_module(ctx: Context) -> None:
     fqdn = f"{TRACK_NAME}.{ctx.env.domain}"
     removed = _delete_existing(ctx, fqdn)

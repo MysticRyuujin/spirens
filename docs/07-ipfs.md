@@ -4,10 +4,12 @@ SPIRENS runs [Kubo](https://github.com/ipfs/kubo), the reference Go
 implementation of IPFS, to host your own content-addressed storage and
 gateway. Once running, you get:
 
-- `https://ipfs.example.com/ipfs/{cid}` — path-style access
-- `https://{cid}.ipfs.example.com/` — subdomain-style access
+- `https://ipfs.example.com/ipfs/{cid}` — path-style content access
+- `https://{cid}.ipfs.example.com/` — subdomain-style content access
   (important for browser same-origin isolation between CIDs)
-- `https://ipfs.example.com/ipns/{name}` — IPNS / DNSLink resolution
+- `https://ipfs.example.com/ipns/{name}` — path-style IPNS / DNSLink
+- `https://{key}.ipns.example.com/` — subdomain-style IPNS
+  (same origin-isolation benefit; routes via the `*.ipns.$BASE` wildcard)
 - A libp2p swarm port on `:4001` TCP+UDP — peer connections
 
 ## Why `IPFS_PROFILE=server,pebbleds`
@@ -68,14 +70,18 @@ public-gateway entry — `spirens configure-ipfs` does this for you.
 
 **Why wildcard DNS + wildcard TLS matter here:** `bafybei….ipfs.example.com`
 is a new hostname per CID. You need `*.ipfs.example.com` in DNS (so it
-routes) and in the TLS cert (so browsers don't balk).
+routes) and in the TLS cert (so browsers don't balk). Same applies to
+IPNS — `{key}.ipns.example.com` needs `*.ipns.example.com` wildcards.
 
-Both are set up by SPIRENS out of the box:
+All four are set up by SPIRENS out of the box:
 
 - DNS: see [02 — DNS & Cloudflare](02-dns-and-cloudflare.md) — the
-  `*.ipfs` record.
-- TLS: see the `tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}` entry in
+  `*.ipfs` and `*.ipns` records.
+- TLS: see the `tls.domains[0].sans=*.${IPFS_GATEWAY_HOST}` entry
+  (CID subdomain) and the parallel `tls.domains[0].sans=*.ipns.${BASE_DOMAIN}`
+  entry (IPNS subdomain) in
   [`compose/single-host/compose.ipfs.yml`](../compose/single-host/compose.ipfs.yml).
+  Two separate wildcard-cert requests; Traefik issues both at first boot.
 
 ## Post-deploy configuration
 

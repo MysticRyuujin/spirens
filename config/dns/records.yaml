@@ -26,10 +26,19 @@
 # =============================================================================
 ---
 records:
-  - { type: A, name: rpc,          proxied: false, visibility: public,   comment: "eRPC JSON-RPC endpoint" }
-  - { type: A, name: ipfs,         proxied: false, visibility: public,   comment: "IPFS HTTP gateway (root)" }
-  - { type: A, name: "*.ipfs",     proxied: false, visibility: public,   comment: "IPFS subdomain gateway (wildcard, DNS-only on free CF plans)" }
-  - { type: A, name: eth,          proxied: false, visibility: public,   comment: "ENS gateway root" }
-  - { type: A, name: "*.eth",      proxied: false, visibility: public,   comment: "ENS subdomain gateway (wildcard, DNS-only on free CF plans)" }
-  - { type: A, name: ens-resolver, proxied: false, visibility: internal, comment: "DoH endpoint Kubo uses for .eth resolution" }
-  - { type: A, name: traefik,      proxied: true,  visibility: internal, comment: "Traefik dashboard (IP-allowlisted + basic-auth)" }
+  # Non-wildcards are proxied by default — CF gives you DDoS protection,
+  # CDN caching of idempotent JSON-RPC / CID responses, and hides your
+  # origin IP for free. eRPC is pure HTTP(S) JSON-RPC (no WebSockets),
+  # so CF's WebSocket idle-timeout isn't a concern for us.
+  - { type: A, name: rpc,          proxied: true,  visibility: public,   comment: "eRPC JSON-RPC endpoint (proxied; eRPC is HTTP-only)" }
+  - { type: A, name: ipfs,         proxied: true,  visibility: public,   comment: "IPFS HTTP gateway root (proxied for CID caching; ≤100MB on CF Free)" }
+  - { type: A, name: eth,          proxied: true,  visibility: public,   comment: "ENS gateway root (proxied)" }
+  - { type: A, name: ens-resolver, proxied: true,  visibility: internal, comment: "DoH endpoint Kubo uses for .eth resolution (proxied)" }
+  - { type: A, name: traefik,      proxied: true,  visibility: internal, comment: "Traefik dashboard (IP-allowlisted + basic-auth; proxied)" }
+
+  # Wildcards MUST be DNS-only on Cloudflare Free/Pro — proxying wildcards
+  # requires Business ($200/mo) or higher. They'd happily be proxied if
+  # the plan allowed.
+  - { type: A, name: "*.ipfs",     proxied: false, visibility: public,   comment: "IPFS subdomain gateway — content by CID ({cid}.ipfs.$BASE)" }
+  - { type: A, name: "*.ipns",     proxied: false, visibility: public,   comment: "IPFS subdomain gateway — mutable names ({key}.ipns.$BASE)" }
+  - { type: A, name: "*.eth",      proxied: false, visibility: public,   comment: "ENS subdomain gateway (wildcard; CF Free/Pro can't proxy wildcards)" }

@@ -55,11 +55,25 @@ project:
 
 ### `projects[0].upstreams`
 
-Primary: `${ETH_LOCAL_URL}` on chainId 1. When `ETH_LOCAL_URL` is empty,
-this upstream is effectively a no-op — eRPC moves on.
+Default: eRPC's built-in `repository` provider pointed at
+`https://evm-public-endpoints.erpc.cloud`. It pulls a curated list of
+free public RPC endpoints for 2,000+ EVM chains from `chainlist.org`,
+`chainid.network`, and `viem`, auto-rotates between them on failure, and
+inherits our `upstreamDefaults.failsafe` retry + circuit-breaker policy.
+Zero keys, zero config — the stack boots useful out of the box.
 
-Fallbacks: all commented out. Uncomment the ones you want and set the
-matching API key in `.env`.
+Caveat: public endpoints are best-effort. Inconsistent latency,
+unadvertised rate limits, occasional gaps in method coverage. Fine for
+dev and first-boot; if you care about latency or a SLA, run your own
+node or a vendor.
+
+Optional upgrades (all commented out in the file):
+
+- **Your own node** — uncomment the `${ETH_LOCAL_URL}` block and set
+  the value in `.env`. When healthy, a local node wins decisively and
+  the repository provider becomes a fallback.
+- **Paid vendors** — Alchemy / Ankr / Infura blocks with API-key env
+  vars. Useful when you want guaranteed throughput on specific chains.
 
 ### Request routing
 

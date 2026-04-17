@@ -11,7 +11,11 @@
 #
 #  Key design choices for the MVP:
 #    - ONE project (`main`) exposing Ethereum mainnet
-#    - Local node is the primary upstream (uncommented); vendors are fallback
+#    - eRPC's built-in `repository` provider as the default upstream: it
+#      pulls a curated list of free public endpoints for 2,000+ EVM chains
+#      from https://evm-public-endpoints.erpc.cloud. Good enough for dev
+#      and first boot; uncomment the local-node / vendor blocks below for
+#      production where you control latency and rate limits.
 #    - Single in-memory cache tier; no Redis by default
 #    - Retries + circuit-breaker for failover; no hedging
 #    - Each vendor has its own rate-limit budget so one provider can't be
@@ -72,21 +76,37 @@ projects:
 
     upstreams:
 
-      # ─── PRIMARY: your own Ethereum node ─────────────────────────────────
-      # Set ETH_LOCAL_URL in .env:
+      # ─── PRIMARY: your own Ethereum node ────────────────────────────────
+      # Automatically stripped by `spirens up` when ETH_LOCAL_URL is
+      # empty — the surrounding spirens:local_node markers gate it. Set
+      # ETH_LOCAL_URL in .env to activate; when set, this upstream wins
+      # decisively over the repository fallback below because it's
+      # declared first.
       #   host-run node:  http://host.docker.internal:8545
       #   LAN-run node:   http://192.168.1.50:8545
       # See docs/05-ethereum-node.md for how to run one.
-      # Leave ETH_LOCAL_URL empty to skip this upstream entirely.
+      # spirens:local_node:begin
       - endpoint: "${ETH_LOCAL_URL}"
         evm:
           chainId: 1
         rateLimitBudget: default
-        # Higher = preferred. eRPC routes to the highest-scored healthy upstream.
-        # Local nodes should win decisively when healthy.
-        # (Scoring is optional — without it, upstreams are tried in declared order.)
+      # spirens:local_node:end
 
-      # ─── FALLBACK: vendor providers ─────────────────────────────────────
+      # ─── FALLBACK: public-RPC repository (2,000+ chains, no keys) ───────
+      # eRPC's built-in `repository` provider aggregates free public
+      # endpoints from chainlist.org / chainid.network / viem. It
+      # auto-discovers chains, rotates between endpoints on failure, and
+      # respects our rate-limit / retry / circuit-breaker policies from
+      # upstreamDefaults.failsafe above.
+      #
+      # Pros: works out of the box, zero config, covers every chain ID.
+      # Cons: public endpoints are best-effort — inconsistent latency,
+      # unadvertised rate limits, occasional gaps. For production you
+      # should run your own node (above) or a paid vendor with a SLA.
+      - endpoint: repository://evm-public-endpoints.erpc.cloud
+        rateLimitBudget: default
+
+      # ─── VENDOR PROVIDERS (alternative supplements) ─────────────────────
       # Uncomment the ones you want active AND set their API key in .env.
       #
       # - endpoint: "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"

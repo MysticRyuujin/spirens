@@ -108,7 +108,18 @@ def bootstrap(
         ensure_config(
             runner, "spirens_traefik_dynamic", str(repo_root / "config/traefik/dynamic.yml")
         )
-        ensure_config(runner, "spirens_erpc_yaml", str(repo_root / "config/erpc/erpc.yaml"))
+        # Swarm uploads the rendered erpc.generated.yaml — the local-node
+        # block is stripped when ETH_LOCAL_URL is empty, which keeps eRPC
+        # from hitting its "unsupported vendor name in vendor.settings"
+        # parse failure. `spirens up` re-renders on every invocation.
+        from spirens.core.erpc_config import render as render_erpc
+
+        render_erpc(repo_root, config)
+        ensure_config(
+            runner,
+            "spirens_erpc_yaml",
+            str(repo_root / "config/erpc/erpc.generated.yaml"),
+        )
 
     log("bootstrap complete")
 

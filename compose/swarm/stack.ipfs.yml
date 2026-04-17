@@ -72,6 +72,17 @@ services:
         - "traefik.http.routers.ipfs-sub.middlewares=security-headers@file,cors-web3@file"
         - "traefik.http.routers.ipfs-sub.service=ipfs"
 
+        # IPNS subdomain gateway — mirrors ipfs-sub but on *.ipns.$BASE.
+        # Kubo's subdomain gateway on the apex domain handles both CID
+        # and IPNS forms; Traefik just needs a matching router + cert SAN.
+        - "traefik.http.routers.ipns-sub.rule=HostRegexp(`.+.ipns.${BASE_DOMAIN:?unset}`)"
+        - "traefik.http.routers.ipns-sub.entrypoints=websecure"
+        - "traefik.http.routers.ipns-sub.tls.certresolver=le"
+        - "traefik.http.routers.ipns-sub.tls.domains[0].main=ipns.${BASE_DOMAIN}"
+        - "traefik.http.routers.ipns-sub.tls.domains[0].sans=*.ipns.${BASE_DOMAIN}"
+        - "traefik.http.routers.ipns-sub.middlewares=security-headers@file,cors-web3@file"
+        - "traefik.http.routers.ipns-sub.service=ipfs"
+
         - "traefik.http.services.ipfs.loadbalancer.server.port=8080"
 
 volumes:

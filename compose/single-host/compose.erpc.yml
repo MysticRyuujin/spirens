@@ -37,7 +37,11 @@ services:
     #   start_period: 15s
 
     volumes:
-      - ../../config/erpc/erpc.yaml:/etc/erpc/erpc.yaml:ro
+      # erpc.generated.yaml is rendered by `spirens up` from erpc.yaml
+      # with env-gated blocks resolved (e.g. the local-node upstream is
+      # stripped when ETH_LOCAL_URL is empty). The committed template
+      # lives alongside; the rendered file is gitignored.
+      - ../../config/erpc/erpc.generated.yaml:/etc/erpc/erpc.yaml:ro
 
     environment:
       # Pull through values needed by the YAML. eRPC's config templating

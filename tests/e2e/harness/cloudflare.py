@@ -119,6 +119,36 @@ def upsert_a_record(
     return create_record(env, type_="A", name=fqdn, content=ip, proxied=proxied)
 
 
+def get_ssl_mode(env: TestEnv) -> str:
+    """Return the zone's current SSL/TLS encryption mode.
+
+    Possible values: off, flexible, full, strict. See
+    https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/
+
+    Requires the CF token to include ``Zone.Zone Settings:Read`` (or
+    Edit, which implies Read). Raises on HTTP error.
+    """
+    zid = zone_id(env)
+    r = _req(env, "GET", f"/zones/{zid}/settings/ssl")
+    result: dict[str, Any] = r.get("result", {})
+    return str(result.get("value", ""))
+
+
+def set_ssl_mode(env: TestEnv, mode: str) -> None:
+    """Set the zone's SSL/TLS encryption mode. No-op when already there.
+
+    Requires ``Zone.Zone Settings:Edit``. On a token without that scope,
+    Cloudflare returns 403 with ``code: 9109`` (``Unauthorized to access
+    requested resource``) — callers should catch and surface a clear
+    remediation instead of crashing.
+    """
+    valid = {"off", "flexible", "full", "strict"}
+    if mode not in valid:
+        raise ValueError(f"invalid SSL mode {mode!r}; must be one of {sorted(valid)}")
+    zid = zone_id(env)
+    _req(env, "PATCH", f"/zones/{zid}/settings/ssl", body={"value": mode})
+
+
 def purge_non_ns(env: TestEnv) -> int:
     """Delete every non-NS record on the zone. Returns the count deleted."""
     deleted = 0

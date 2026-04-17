@@ -31,7 +31,7 @@ ETH_LOCAL_URL=${ETH_LOCAL_URL}
 REDIS_PASSWORD=
 
 # Public-profile: declare which records DDNS should track. Left empty by
-# default so phase 10 can lay records down manually; phase 12 toggles
+# default so phase 06 can lay records down manually; phase 14 toggles
 # this on to exercise the DDNS module itself.
 DDNS_RECORDS=
 PUBLIC_IP=${PUBLIC_IP}

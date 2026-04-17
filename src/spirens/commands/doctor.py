@@ -132,15 +132,43 @@ def _check_network(name: str) -> tuple[bool, str]:
 
 
 def _check_port(port: int) -> tuple[bool, str]:
+    """Confirm nothing unexpected is bound to 80/443.
+
+    On a stack that's up, Traefik (spirens-traefik) owns these ports
+    intentionally — that's a PASS, not a conflict. Only flag the check
+    when something else is holding the port.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(1)
             result = s.connect_ex(("127.0.0.1", port))
-            if result == 0:
-                return False, f"port {port} already in use"
-            return True, f"port {port} available"
+            if result != 0:
+                return True, f"port {port} available"
     except Exception as exc:
         return False, str(exc)
+
+    # Port is bound. Ask dockerd who owns it — PublishedPorts on a
+    # running spirens-traefik container means we're looking at our own
+    # ingress, which is the expected state post-`up`.
+    try:
+        inspect = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "--format",
+                "{{range .NetworkSettings.Ports}}{{range .}}{{.HostPort}} {{end}}{{end}}",
+                "spirens-traefik",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if inspect.returncode == 0 and str(port) in inspect.stdout.split():
+            return True, f"port {port} held by spirens-traefik (expected)"
+    except Exception:
+        # docker unavailable or container missing — fall through to "in use"
+        pass
+    return False, f"port {port} already in use"
 
 
 def _get_deployment_profile(repo_root: Path) -> str:

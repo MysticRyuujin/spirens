@@ -29,6 +29,14 @@ SSH_OPTS = (
     "LogLevel=ERROR",
     "-o",
     "ConnectTimeout=10",
+    # Keepalives so cloud-NAT (Azure especially) doesn't idle-kill the
+    # session during long remote ops like `docker compose up` with cold
+    # image pulls. Without these, the ssh client returns 255 after the
+    # NAT drops the flow, masking the real remote exit status.
+    "-o",
+    "ServerAliveInterval=30",
+    "-o",
+    "ServerAliveCountMax=20",
 )
 
 
