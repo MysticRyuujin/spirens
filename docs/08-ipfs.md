@@ -83,6 +83,49 @@ All four are set up by SPIRENS out of the box:
   [`compose/single-host/compose.ipfs.yml`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/compose.ipfs.yml).
   Two separate wildcard-cert requests; Traefik issues both at first boot.
 
+## Why path URLs don't auto-redirect to subdomains
+
+Canonically, a Kubo gateway with `UseSubdomains: true` responds to
+`GET /ipfs/{cid}` with a 301 redirect to `{cid}.ipfs.{gateway-host}`.
+That's the "type into the URL bar once, land on an origin-isolated
+subdomain" flow most operators expect.
+
+**SPIRENS does not emit that redirect.** Hitting
+`https://ipfs.example.com/ipfs/{cid}` serves the content directly on the
+path URL; it does not redirect to `{cid}.ipfs.example.com`. Both URLs
+work — they just don't redirect to each other.
+
+**Why.** Kubo [issue #9658](https://github.com/ipfs/kubo/issues/9658):
+when the gateway host already contains `ipfs.` (like
+`ipfs.example.com`), `UseSubdomains: true` redirects to
+`{cid}.ipfs.ipfs.example.com` — a doubled `ipfs.` label, no cert, no
+route. Closed as won't-fix; the Kubo team treats "`ipfs.` at a
+sub-label" as operator-config, not a Kubo bug.
+
+**SPIRENS's workaround** (see
+[`src/spirens/core/ipfs.py`](https://github.com/MysticRyuujin/spirens/blob/main/src/spirens/core/ipfs.py))
+is to register **two** `Gateway.PublicGateways` entries, matched by
+Host header:
+
+- `ipfs.$BASE` with `UseSubdomains: false` — path gateway, serves
+  `ipfs.example.com/ipfs/{cid}` directly, never redirects.
+- `$BASE` (the apex, e.g. `example.com`) with `UseSubdomains: true` —
+  subdomain gateway, recognises `{cid}.ipfs.example.com` and
+  `{key}.ipns.example.com` and serves them directly.
+
+No doubling because no entry has `ipfs.` in its own host label. You lose
+the canonical path→subdomain redirect, but both URL shapes work.
+
+**If you need the redirect flow**, use a gateway host whose leftmost
+label is **not** `ipfs`. For example, setting
+`IPFS_GATEWAY_HOST=gateway.example.com` sidesteps the Kubo bug entirely
+— a single `PublicGateways` entry with `UseSubdomains: true` works as
+documented, and `gateway.example.com/ipfs/{cid}` redirects to
+`{cid}.ipfs.gateway.example.com`. That move also requires updating
+`src/spirens/core/ipfs.py` to emit one entry instead of two, plus new
+DNS/TLS wildcards (`*.gateway.example.com`). Not SPIRENS's default, but
+a clean path for anyone who needs the canonical redirect flow.
+
 ## Post-deploy configuration
 
 Some Kubo settings can only be set via the HTTP API after the node starts

@@ -120,6 +120,24 @@ SPIRENS already issued covers them at the origin.
 
 ---
 
+## `ipfs.example.com/ipfs/{cid}` doesn't redirect to `{cid}.ipfs.example.com`
+
+**Why.** Known Kubo behavior
+([ipfs/kubo#9658](https://github.com/ipfs/kubo/issues/9658)) — when the
+gateway host already contains `ipfs.`, enabling `UseSubdomains: true`
+redirects to `{cid}.ipfs.ipfs.example.com` (doubled `ipfs.`), so SPIRENS
+splits the Kubo gateway config into two entries instead: a path-style
+entry on `ipfs.$BASE` and a subdomain entry on the apex `$BASE`. Both
+URL shapes work independently; there's just no auto-redirect between
+them.
+
+**Fix.** Not a bug — working as designed. See
+[08 — IPFS: Why path URLs don't auto-redirect to subdomains](08-ipfs.md#why-path-urls-dont-auto-redirect-to-subdomains)
+for the full explanation and the "use `gateway.$BASE`" alternative if
+you need the canonical redirect flow.
+
+---
+
 ## Kubo isn't resolving `.eth` names
 
 `ipfs resolve /ipns/vitalik.eth` fails with

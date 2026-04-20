@@ -92,7 +92,10 @@ class KuboClient:
         # When UseSubdomains is true, Kubo redirects path requests to
         # ``{cid}.ipfs.{HOSTNAME}``. If HOSTNAME is already ``ipfs.$BASE``
         # the redirect target is ``{cid}.ipfs.ipfs.$BASE`` — doubled
-        # ``.ipfs.``, which we have no cert or router for. Splitting:
+        # ``.ipfs.``, which we have no cert or router for. See
+        # ipfs/kubo#9658 (closed as won't-fix) and the operator-facing
+        # explainer in docs/08-ipfs.md "Why path URLs don't auto-redirect
+        # to subdomains". Splitting:
         #
         #   - ``ipfs.$BASE`` (subdomains=False):   path gateway, serves
         #     ``ipfs.$BASE/ipfs/{cid}`` directly.
