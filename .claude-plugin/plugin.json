@@ -8,7 +8,7 @@
   },
   "homepage": "https://mysticryuujin.github.io/spirens/",
   "repository": "https://github.com/MysticRyuujin/spirens",
-  "license": "AGPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "keywords": [
     "ipfs",
     "ipns",
