@@ -148,7 +148,7 @@ The CF-specific choices SPIRENS makes:
 
 - **Traefik uses CF DNS-01 for all issuance** — works with proxy on or
   off. [`docs/03-certificates.md`](../docs/03-certificates.md).
-- **Wildcards (`*.ipfs`, `*.eth`) stay DNS-only.** See the per-record
+- **Wildcards (`*.ipfs`, `*.ipns`, `*.eth`) stay DNS-only.** See the per-record
   table in [`docs/02-dns-and-cloudflare.md`](../docs/02-dns-and-cloudflare.md).
 - **Zone SSL/TLS mode must be Full.** `spirens doctor` verifies this if
   the API token includes `Zone.Zone Settings:Edit`.

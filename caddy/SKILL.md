@@ -308,7 +308,8 @@ SPIRENS uses Traefik. If you prefer Caddy, the migration:
    (include `caddy-dns/cloudflare` or `caddy-dns/digitalocean`).
 2. Translate the per-service Traefik labels into Caddyfile
    site-address blocks — see [the wildcard Caddyfile](#caddyfile) for
-   the `*.ipfs.example.com`, `*.eth.example.com` shape SPIRENS needs.
+   the `*.ipfs.example.com`, `*.ipns.example.com`, `*.eth.example.com`
+   shape SPIRENS needs.
 3. Set `CF_DNS_API_TOKEN` (or `DO_AUTH_TOKEN`) in the Caddy container
    env and keep `caddy_data` as a named volume — the [compose
    snippet](#compose-wiring) has the required mounts.

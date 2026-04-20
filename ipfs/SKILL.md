@@ -219,9 +219,9 @@ serves the same CID fine:
 
 SPIRENS runs Kubo as the `ipfs` service:
 
-- Subdomain gateway enabled on `ipfs.example.com` with wildcard for
-  `*.ipfs.example.com`. See
-  [`docs/08-ipfs.md`](../docs/08-ipfs.md).
+- Subdomain gateway enabled on `ipfs.example.com` with wildcards for
+  `*.ipfs.example.com` (CIDs) and `*.ipns.example.com` (mutable names).
+  See [`docs/08-ipfs.md`](../docs/08-ipfs.md).
 - `spirens configure-ipfs` applies the Kubo config via the local HTTP
   API (no container restart required).
 - Reprovider strategy, peering, and gateway config are opinionated —

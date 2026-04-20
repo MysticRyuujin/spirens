@@ -145,8 +145,8 @@ When ACME is stuck, the cause is almost always one of five things:
 ## Worked example: SPIRENS (Traefik + Cloudflare DNS-01)
 
 SPIRENS uses DNS-01 with Cloudflare because it needs wildcards
-(`*.eth.example.com`, `*.ipfs.example.com`) and works regardless of
-whether records are CF-proxied. See:
+(`*.eth.example.com`, `*.ipfs.example.com`, `*.ipns.example.com`) and
+works regardless of whether records are CF-proxied. See:
 
 - [`docs/03-certificates.md`](../docs/03-certificates.md) — walkthrough
   with cert-issuance log snippets.

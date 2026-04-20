@@ -182,8 +182,9 @@ DNS-01 on Cloudflare:
 - Certs and account are persisted in the `letsencrypt` Docker volume
   (`/letsencrypt/acme.json`).
 - The default keyType is EC256 (ECDSA P-256).
-- Wildcards (`*.eth.example.com`, `*.ipfs.example.com`) are issued via
-  DNS-01 because LE requires DNS-01 for wildcards regardless of CA.
+- Wildcards (`*.eth.example.com`, `*.ipfs.example.com`,
+  `*.ipns.example.com`) are issued via DNS-01 because LE requires
+  DNS-01 for wildcards regardless of CA.
 
 See [`docs/03-certificates.md`](../docs/03-certificates.md) for the full
 walkthrough and [`tls-acme/SKILL.md`](../tls-acme/SKILL.md) for the

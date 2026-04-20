@@ -14,8 +14,9 @@ ACME challenges, dweb-proxy will 502, and the IPFS gateway will serve
 cert errors. Preflight beats iteration.
 
 **You pick a reverse proxy before you pick a challenge type.** If you
-need wildcards (and you do, for `*.ipfs.example.com` and
-`*.eth.example.com`), your proxy must support ACME DNS-01. Caddy, Traefik,
+need wildcards (and you do, for `*.ipfs.example.com`,
+`*.ipns.example.com`, and `*.eth.example.com`), your proxy must support
+ACME DNS-01. Caddy, Traefik,
 and nginx-with-acme.sh all do — but each configures it differently.
 Decide before you `docker pull` anything. Fetch `tls-acme/SKILL.md`.
 

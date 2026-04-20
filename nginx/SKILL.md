@@ -122,7 +122,8 @@ Issue the wildcard:
 certbot certonly \
   --dns-cloudflare \
   --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini \
-  -d 'example.com' -d '*.example.com' -d '*.ipfs.example.com'
+  -d 'example.com' -d '*.example.com' \
+  -d '*.ipfs.example.com' -d '*.ipns.example.com'
 ```
 
 Reference the resulting cert from nginx:

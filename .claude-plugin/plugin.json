@@ -1,6 +1,6 @@
 {
   "name": "spirens-skills",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Decentralized-web infra skills — corrects LLM blind spots on IPFS, IPNS, gateways, ENS resolution, TLS/ACME, DNS/Cloudflare, Traefik, nginx, Caddy, eRPC, Helios light client, and single-host vs Swarm topology.",
   "author": {
     "name": "SPIRENS contributors",

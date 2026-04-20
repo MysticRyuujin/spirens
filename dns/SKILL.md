@@ -153,8 +153,8 @@ The SPIRENS DNS record set (public profile) is:
 
 - `rpc` → A record, CF-proxied, JSON-RPC endpoint.
 - `ipfs`, `eth`, `ens-resolver`, `traefik` → A records, CF-proxied.
-- `*.ipfs`, `*.eth` → A records, **DNS-only** (CF wildcard proxy is
-  paid).
+- `*.ipfs`, `*.ipns`, `*.eth` → A records, **DNS-only** (CF wildcard
+  proxy is paid).
 
 See [`docs/02-dns-and-cloudflare.md`](../docs/02-dns-and-cloudflare.md)
 for the full table with reasoning per record, and

@@ -4,14 +4,14 @@
     "name": "SPIRENS contributors"
   },
   "metadata": {
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Decentralized-web infra skills — IPFS, IPNS, gateways, ENS resolution, TLS/ACME, DNS/Cloudflare, Traefik, nginx, Caddy, eRPC, and single-host vs Swarm topology."
   },
   "plugins": [
     {
       "name": "spirens-skills",
       "source": "./",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Decentralized-web infra skills — corrects LLM blind spots on the stack SPIRENS ships (and its common alternatives).",
       "author": {
         "name": "SPIRENS contributors"
