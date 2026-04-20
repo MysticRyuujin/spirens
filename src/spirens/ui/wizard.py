@@ -151,7 +151,7 @@ class SetupWizard:
         console.print("[bold]Step 1: Deployment Profile[/bold]\n")
         console.print(
             "  How will clients reach your SPIRENS services?\n"
-            "  See [link=https://mysticryuujin.github.io/spirens/10-deployment-profiles/]"
+            "  See [link=https://mysticryuujin.github.io/spirens/04-deployment-profiles/]"
             "docs/04-deployment-profiles.md[/link] for details.\n"
         )
 

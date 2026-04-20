@@ -1,10 +1,9 @@
 # SPIRENS E2E harness
 
 Live-VM integration tests for the full `spirens` stack, driven from the
-workstation against a reachable test VM (`test01` on the LAN in the
-primary setup). Complements the unit suite under `tests/test_*.py` by
-exercising everything that actually talks to Docker, ACME, Kubo,
-Cloudflare, and the end-to-end request path.
+workstation against a reachable test VM. Complements the unit suite
+under `tests/test_*.py` by exercising everything that actually talks to
+Docker, ACME, Kubo, Cloudflare, and the end-to-end request path.
 
 ## Why this harness exists
 
@@ -40,17 +39,17 @@ subcommand to `remote.py` instead.
 
    Required keys:
 
-   | Key                          | Example                      | Purpose                                                               |
+   | Key                          | Placeholder                  | Purpose                                                               |
    | ---------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-   | `SPIRENS_TEST_HOST`          | `test01.example.com`      | SSH-resolvable hostname                                               |
-   | `SPIRENS_TEST_IP`            | `192.168.1.10`             | how the workstation reaches the VM (LAN or public IP)                 |
+   | `SPIRENS_TEST_HOST`          | `test01.example.com`         | SSH-resolvable hostname                                               |
+   | `SPIRENS_TEST_IP`            | `192.168.1.10`               | how the workstation reaches the VM (LAN or public IP)                 |
    | `SPIRENS_TEST_USER`          | `root` (default)             | SSH user; cloud images use `azureuser` / `ubuntu` / etc.              |
    | `SPIRENS_TEST_REMOTE_REPO`   | (empty — auto)               | where to rsync; defaults to `/root/spirens` or `/home/<user>/spirens` |
    | `SPIRENS_TEST_PROFILE`       | `internal` or `public`       | drives which fixture + which phases run (default: `internal`)         |
    | `SPIRENS_TEST_PUBLIC_IP`     | `203.0.113.42` (public only) | what A records should point at; falls back to `SPIRENS_TEST_IP`       |
-   | `SPIRENS_TEST_DOMAIN`        | `example.com`          | Cloudflare zone under test                                            |
+   | `SPIRENS_TEST_DOMAIN`        | `example.com`                | Cloudflare zone under test                                            |
    | `SPIRENS_TEST_ACME_EMAIL`    | your email                   | LE registration email                                                 |
-   | `SPIRENS_TEST_ETH_LOCAL_URL` | `http://192.168.1.50:8545`  | optional local eth node (leave empty to skip the local path)          |
+   | `SPIRENS_TEST_ETH_LOCAL_URL` | `http://192.168.1.50:8545`   | optional local eth node (leave empty to skip the local path)          |
    | `CF_API_EMAIL`               | your Cloudflare email        |                                                                       |
    | `CF_DNS_API_TOKEN`           | scoped token (Zone.DNS:Edit) |                                                                       |
 

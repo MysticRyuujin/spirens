@@ -2,9 +2,17 @@
 
 Sovereign Portal for IPFS Resolution via Ethereum Naming Services
 
-A turnkey, modular, educational reference for self-hosting a private Web3
+A modular, **educational** reference for self-hosting a private Web3
 infrastructure stack. Clone it, add a domain as a Cloudflare zone, run the
 setup wizard, and bring up:
+
+!!! warning "Educational reference — not production-ready"
+
+    SPIRENS exists to teach the shape of a self-hosted Ethereum/IPFS/ENS
+    stack. It is **not** audited, is **not** battle-tested, and ships **no
+    support commitment**. Issues and PRs are welcome and will be looked at
+    when time allows. If you run this on the public internet, you are the
+    operator — own it end to end.
 
 | Endpoint                           | What it is                                                                                   |
 | ---------------------------------- | -------------------------------------------------------------------------------------------- |

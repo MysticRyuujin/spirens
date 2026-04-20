@@ -1,11 +1,20 @@
 # SPIRENS
 
-> **Vibe-coded.** This project was built with AI assistance. Contributions are
-> welcome — but don't expect much support or hand-holding.
+> **⚠️ Educational reference — not production-ready.**
+>
+> SPIRENS exists to teach the **shape** of a self-hosted Ethereum / IPFS / ENS
+> stack. It is **not** security-audited, **not** battle-tested, and comes
+> with **no support commitment** — issues and PRs are looked at when time
+> allows, best-effort. If you deploy this on the public internet, you are the
+> operator: own it end to end, read every config, and do not copy-paste
+> credentials.
+>
+> The project was built with heavy AI assistance. Treat every line as
+> something to understand before you run.
 
 Sovereign Portal for IPFS Resolution via Ethereum Naming Services
 
-A turnkey, modular, educational reference for self-hosting a private Web3
+A modular, educational reference for self-hosting a private Web3
 infrastructure stack. Clone it, add a domain as a Cloudflare zone (for ACME
 TLS only — your A records can stay wherever they currently live), fill in a
 `.env`, and bring up:

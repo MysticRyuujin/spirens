@@ -13,6 +13,7 @@ description = "CLI for SPIRENS — Sovereign Portal for IPFS Resolution via Ethe
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.14"
+authors = [{ name = "MysticRyuujin" }]
 dependencies = [
   "typer>=0.24",
   "rich>=15.0",
@@ -22,6 +23,11 @@ dependencies = [
   "httpx>=0.28",
   "pyyaml>=6.0.3",
 ]
+
+[project.urls]
+Homepage = "https://mysticryuujin.github.io/spirens/"
+Repository = "https://github.com/MysticRyuujin/spirens"
+Issues = "https://github.com/MysticRyuujin/spirens/issues"
 
 [project.scripts]
 spirens = "spirens.cli:app"

@@ -88,8 +88,9 @@ git pull
 
 Before bringing services up, check two things:
 
-1. **`CHANGELOG` / release notes** on the repo. Breaking changes (env
-   var renames, compose rewiring) are called out.
+1. **Recent commits** (`git log HEAD@{1}..HEAD --oneline`). Breaking
+   changes — env var renames, compose rewiring — are called out in
+   commit messages.
 2. **Your `.env`** against `.env.example`. A `diff` between them shows
    any new settings you need to add:
 

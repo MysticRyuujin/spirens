@@ -182,7 +182,7 @@ need public access.
 
 ## Rotation schedule
 
-A reasonable calendar for a production-ish deployment:
+A reasonable calendar for a long-running deployment:
 
 | Asset                    | Rotate every | Trigger                            |
 | :----------------------- | :----------- | :--------------------------------- |

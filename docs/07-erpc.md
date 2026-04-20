@@ -186,7 +186,7 @@ ports:
 ```
 
 and scrape `http://localhost:4001/metrics`. SPIRENS doesn't ship a
-Prometheus stack in v1 — bring your own. eRPC's metrics format is
+Prometheus stack — bring your own. eRPC's metrics format is
 documented at <https://docs.erpc.cloud/operation/monitoring>.
 
 Continue → [08 — IPFS](08-ipfs.md)
