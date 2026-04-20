@@ -33,6 +33,7 @@ profile:
 | `rpc`                   | Local DNS → internal IP | Cloudflare A → public IP | Tunnel hostname                |
 | `ipfs`                  | Local DNS → internal IP | Cloudflare A → public IP | Tunnel hostname                |
 | `*.ipfs`                | Local DNS → internal IP | Cloudflare A → public IP | Per-subdomain or paid wildcard |
+| `*.ipns`                | Local DNS → internal IP | Cloudflare A → public IP | Per-subdomain or paid wildcard |
 | `eth`                   | Local DNS → internal IP | Cloudflare A → public IP | Tunnel hostname                |
 | `*.eth`                 | Local DNS → internal IP | Cloudflare A → public IP | Per-subdomain or paid wildcard |
 | `ens-resolver`          | Local DNS → internal IP | Local DNS → internal IP  | Local DNS → internal IP        |
@@ -74,12 +75,13 @@ internal IP of your SPIRENS host. Here are the common approaches:
     traefik.example.com      → 192.168.1.10
     ```
 
-    Pi-hole doesn't support wildcard DNS records natively. For `*.ipfs` and
-    `*.eth` wildcards, add dnsmasq config (Pi-hole uses dnsmasq under the
-    hood). Create `/etc/dnsmasq.d/05-spirens.conf`:
+    Pi-hole doesn't support wildcard DNS records natively. For `*.ipfs`,
+    `*.ipns`, and `*.eth` wildcards, add dnsmasq config (Pi-hole uses
+    dnsmasq under the hood). Create `/etc/dnsmasq.d/05-spirens.conf`:
 
     ```text
     address=/ipfs.example.com/192.168.1.10
+    address=/ipns.example.com/192.168.1.10
     address=/eth.example.com/192.168.1.10
     ```
 
@@ -94,6 +96,7 @@ internal IP of your SPIRENS host. Here are the common approaches:
     | rpc  | example.com         | A    | 192.168.1.10  |
     | ipfs | example.com         | A    | 192.168.1.10  |
     | *    | ipfs.example.com    | A    | 192.168.1.10  |
+    | *    | ipns.example.com    | A    | 192.168.1.10  |
     | eth  | example.com         | A    | 192.168.1.10  |
     | *    | eth.example.com     | A    | 192.168.1.10  |
     | ens-resolver | example.com | A    | 192.168.1.10  |
@@ -107,13 +110,16 @@ internal IP of your SPIRENS host. Here are the common approaches:
     ```text
     address=/rpc.example.com/192.168.1.10
     address=/ipfs.example.com/192.168.1.10
+    address=/ipns.example.com/192.168.1.10
     address=/eth.example.com/192.168.1.10
     address=/ens-resolver.example.com/192.168.1.10
     address=/traefik.example.com/192.168.1.10
     ```
 
     The `address=` directive handles wildcards automatically — any subdomain
-    of the specified domain resolves to that IP.
+    of the specified domain resolves to that IP. The `ipns.example.com` entry
+    catches the `*.ipns.example.com` subdomain gateway Kubo serves for
+    mutable IPNS names.
 
 === "Unbound (standalone)"
 
@@ -123,6 +129,8 @@ internal IP of your SPIRENS host. Here are the common approaches:
     server:
       local-zone: "ipfs.example.com." redirect
       local-data: "ipfs.example.com. A 192.168.1.10"
+      local-zone: "ipns.example.com." redirect
+      local-data: "ipns.example.com. A 192.168.1.10"
       local-zone: "eth.example.com." redirect
       local-data: "eth.example.com. A 192.168.1.10"
       local-data: "rpc.example.com. A 192.168.1.10"
@@ -131,7 +139,9 @@ internal IP of your SPIRENS host. Here are the common approaches:
     ```
 
     The `redirect` zone type causes all subdomains to return the same
-    record, providing wildcard behavior.
+    record, providing wildcard behavior — `ipns.example.com.` covers
+    `{key}.ipns.example.com` the same way `ipfs.example.com.` covers
+    `{cid}.ipfs.example.com`.
 
 ### Firewall
 
@@ -282,13 +292,14 @@ tunnel without exposing your host's IP or opening any inbound ports.
         service: https://localhost:443
       - hostname: eth.example.com
         service: https://localhost:443
-      # ... each *.eth and *.ipfs subdomain individually
+      # ... each *.eth, *.ipfs, and *.ipns subdomain individually
       - service: http_status:404
     ```
 
     This is workable for `rpc`, `ipfs`, `eth`, `ens-resolver`, and `traefik`,
-    but breaks the wildcard subdomain model for `*.eth.example.com` and
-    `*.ipfs.example.com` (e.g. `vitalik.eth.example.com`).
+    but breaks the wildcard subdomain model for `*.eth.example.com`,
+    `*.ipfs.example.com`, and `*.ipns.example.com` (e.g.
+    `vitalik.eth.example.com` or `{key}.ipns.example.com`).
 
     **Options:**
 

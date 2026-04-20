@@ -26,7 +26,8 @@ Not sure which profile fits? See
 ## ACME DNS-01: the one thing everyone needs
 
 Regardless of your deployment profile, Traefik needs to obtain wildcard TLS
-certificates (`*.eth.example.com`, `*.ipfs.example.com`) from Let's Encrypt.
+certificates (`*.eth.example.com`, `*.ipfs.example.com`,
+`*.ipns.example.com`) from Let's Encrypt.
 The only LE challenge type that supports wildcards is **DNS-01**, which works
 by creating a temporary TXT record at `_acme-challenge.<domain>`.
 
@@ -60,7 +61,7 @@ Assuming `BASE_DOMAIN=example.com`. This list lives in
 | A    | `rpc`          | Public     | Proxy | eRPC JSON-RPC endpoint (HTTP-only, no WS)                 |
 | A    | `ipfs`         | Public     | Proxy | IPFS HTTP gateway root (CID caching at the edge)          |
 | A    | `*.ipfs`       | Public     | DNS   | IPFS subdomain gateway — `{cid}.ipfs.example.com`         |
-| A    | `*.ipns`       | Public     | DNS   | IPFS subdomain gateway — `{key}.ipns.example.com`         |
+| A    | `*.ipns`       | Public     | DNS   | IPNS subdomain gateway — `{key}.ipns.example.com`         |
 | A    | `eth`          | Public     | Proxy | ENS gateway root                                          |
 | A    | `*.eth`        | Public     | DNS   | ENS subdomain gateway — `vitalik.eth.example.com`         |
 | A    | `ens-resolver` | Internal   | Proxy | DoH endpoint Kubo hits for `.eth` DNSLink resolution      |
@@ -68,7 +69,7 @@ Assuming `BASE_DOMAIN=example.com`. This list lives in
 
 !!! info "Visibility doesn't mean optional"
 
-    All seven hostnames need valid TLS certs (via ACME DNS-01). None of them
+    All eight hostnames need valid TLS certs (via ACME DNS-01). None of them
     **require** public A records unless you want external clients to reach them.
 
     - **Public** records only need public A records if you're running the
@@ -106,18 +107,21 @@ standalone Unbound).
 ```text
 address=/rpc.example.com/192.168.1.10
 address=/ipfs.example.com/192.168.1.10
+address=/ipns.example.com/192.168.1.10
 address=/eth.example.com/192.168.1.10
 address=/ens-resolver.example.com/192.168.1.10
 address=/traefik.example.com/192.168.1.10
 ```
 
 The `address=` directive handles wildcards automatically — any subdomain of the
-specified domain resolves to that IP.
+specified domain resolves to that IP. The `ipns.example.com` entry catches the
+`*.ipns.example.com` subdomain gateway Kubo serves for mutable IPNS names.
 
 **Quick reference — OPNsense Unbound** (Services → Unbound → Overrides):
 
 - `Host: *` `Domain: eth.example.com` `IP: 192.168.1.10`
 - `Host: *` `Domain: ipfs.example.com` `IP: 192.168.1.10`
+- `Host: *` `Domain: ipns.example.com` `IP: 192.168.1.10`
 
 ### Split-horizon DNS (public + internal)
 
@@ -176,6 +180,7 @@ Cloudflare.**
 | `rpc`          | Proxied      | eRPC is HTTP-only JSON-RPC — no WebSocket support — so CF's idle-timeout isn't a factor. You get DDoS protection and cache hits on idempotent RPCs. |
 | `ipfs`         | Proxied      | CF caches by URL, which is ideal for content-addressed CIDs. Caveat: 100MB request/response cap on the Free plan.                                   |
 | `*.ipfs`       | **DNS-only** | **Wildcard proxying is a paid feature** (Advanced Certificate Manager / ACM). On Free/Pro, this MUST stay DNS-only.                                 |
+| `*.ipns`       | **DNS-only** | Same wildcard-on-Free/Pro constraint as `*.ipfs`.                                                                                                   |
 | `eth`          | Proxied      | Same shape as `ipfs` — grey stays grey for `*.eth` because of the wildcard constraint.                                                              |
 | `*.eth`        | **DNS-only** | Same wildcard-on-Free/Pro constraint as `*.ipfs`.                                                                                                   |
 | `ens-resolver` | Proxied      | DoH is plain HTTPS POST with small JSON — benefits from CF's edge caching and origin hiding.                                                        |
@@ -260,7 +265,7 @@ auto-detect that — you need something updating the A records.
 1. List the records that should track your IP in `.env`:
 
    ```ini
-   DDNS_RECORDS=rpc,ipfs,*.ipfs,eth,*.eth,ens-resolver,traefik
+   DDNS_RECORDS=rpc,ipfs,*.ipfs,*.ipns,eth,*.eth,ens-resolver,traefik
    ```
 
 2. Include the module in `compose/single-host/compose.yml`:

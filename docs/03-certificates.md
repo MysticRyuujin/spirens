@@ -35,8 +35,9 @@ fully-working alternative.
 - **No inbound :80 required during issuance** (HTTP-01 needs :80 open;
   DNS-01 doesn't).
 - **Wildcards are natively supported.** You need `*.eth.example.com` for the
-  ENS gateway and `*.ipfs.example.com` for IPFS subdomain content isolation.
-  DNS-01 is the only LE challenge that can issue wildcards.
+  ENS gateway, `*.ipfs.example.com` for IPFS subdomain content isolation,
+  and `*.ipns.example.com` for the parallel IPNS subdomain gateway. DNS-01
+  is the only LE challenge that can issue wildcards.
 - **Works with CF proxy ON or OFF.** Even if you orange-cloud the Traefik
   dashboard, LE validation doesn't depend on HTTP reachability of the origin.
 - **Auto-renewal 30 days before expiry**, no human in the loop.
@@ -154,7 +155,7 @@ Use this if:
 - Renewal is manual. That's a landmine.
 - The UX degrades silently if a user misconfigures proxy mode on one record.
 - Wildcard support on Free plan is limited. SPIRENS relies on wildcards
-  heavily (`*.eth`, `*.ipfs`).
+  heavily (`*.eth`, `*.ipfs`, `*.ipns`).
 - LE DNS-01 via Cloudflare is the common production pattern and works for 99%
   of use cases.
 

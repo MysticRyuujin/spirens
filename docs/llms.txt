@@ -12,7 +12,8 @@ with wildcard TLS from Let's Encrypt (Cloudflare DNS-01).
 ## Core services
 
 - `https://rpc.example.com` — eRPC JSON-RPC proxy (local-first + vendor fallback)
-- `https://ipfs.example.com` — Kubo HTTP gateway (subdomain gateway included)
+- `https://ipfs.example.com` — Kubo HTTP gateway (path + `*.ipfs` subdomain)
+- `https://*.ipns.example.com` — Kubo IPNS subdomain gateway (mutable names)
 - `https://*.eth.example.com` — ENS → IPFS via dweb-proxy
 - `https://ens-resolver.example.com` — DoH endpoint for Kubo DNSLink resolution
 - `https://traefik.example.com` — Traefik dashboard (auth + IP allowlist)

@@ -112,8 +112,8 @@ hostname.
 ## Wildcard subdomains return cert errors in the browser
 
 **Why.** Free Cloudflare plans don't proxy wildcard hosts (`*.ipfs.…`,
-`*.eth.…`) — the proxied wildcard serves CF's shared SSL cert, which
-doesn't cover your domain.
+`*.ipns.…`, `*.eth.…`) — the proxied wildcard serves CF's shared SSL
+cert, which doesn't cover your domain.
 
 **Fix.** Keep those records DNS-only (grey cloud). The wildcard LE cert
 SPIRENS already issued covers them at the origin.

@@ -344,7 +344,8 @@ class SetupWizard:
 
             if enable_ddns:
                 default_records = self.existing.get(
-                    "DDNS_RECORDS", "rpc,ipfs,*.ipfs,eth,*.eth,ens-resolver,traefik"
+                    "DDNS_RECORDS",
+                    "rpc,ipfs,*.ipfs,*.ipns,eth,*.eth,ens-resolver,traefik",
                 )
                 self.values["DDNS_RECORDS"] = inquirer.text(
                     message="DDNS records (comma-separated subdomains):",

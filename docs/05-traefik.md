@@ -89,7 +89,9 @@ on-LAN _and_ know the password.
   otherwise. `spirens bootstrap` enforces this.
 - **Wildcards go in `tls.domains`**, not in the `Host()` rule. See the dweb-proxy
   router in [`compose/single-host/compose.dweb-proxy.yml`](https://github.com/MysticRyuujin/spirens/blob/main/compose/single-host/compose.dweb-proxy.yml)
-  for the pattern.
+  for the pattern. SPIRENS issues three wildcard SANs at first boot —
+  `*.ipfs.$BASE` and `*.ipns.$BASE` from the IPFS routers, and `*.eth.$BASE`
+  from dweb-proxy.
 - **LE staging for testing** — add
   `--certificatesResolvers.le.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory`
   to the Traefik command line while debugging. Certs will be untrusted by

@@ -61,6 +61,14 @@ client ──HTTPS──▶ {cid}.ipfs.example.com
                      └▶ Kubo gateway :8080  (UseSubdomains: true)
 ```
 
+IPNS uses the same gateway with a parallel wildcard:
+
+```text
+client ──HTTPS──▶ {key}.ipns.example.com
+                  └▶ Traefik   (wildcard cert *.ipns.example.com)
+                     └▶ Kubo gateway :8080  (UseSubdomains: true)
+```
+
 ### 4. ENS browse (`vitalik.eth.example.com`)
 
 ```text

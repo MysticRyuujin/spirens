@@ -36,7 +36,7 @@ flowchart TB
 
     client --> cf --> traefik
     traefik -->|rpc.*| erpc
-    traefik -->|ipfs.*  *.ipfs.*| kubo
+    traefik -->|ipfs.*  *.ipfs.*  *.ipns.*| kubo
     traefik -->|*.eth.*| dweb
     traefik -->|ens-resolver.*| dweb
 
